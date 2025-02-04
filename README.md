@@ -1,13 +1,15 @@
 # Entity-Component-System
  Entity-Component-System for C++20.
+ The project was built during my second year at The Game Assembly in Stockholm.
 
-**Features**
+
+## Features
 
 ✔️ Cache-Friendly archetype and SoA (Struct of Arrays) storage.  <br />
 ✔️ Handles POD & non POD datatypes, either by letting the compiler auto generate constructors for you or write your own. <br />
 ✔️ Write free floating queries or add functions to systems that automate and structure the pipelining. <br />
 
- 	<h3> Code </h3>
+### Code
 ```cpp
 struct Position {
   float x, y, z;
