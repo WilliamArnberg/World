@@ -7,7 +7,7 @@
 ✔️ Handles POD & non POD datatypes, either by letting the compiler auto generate constructors for you or write your own. <br />
 ✔️ Write free floating queries or add functions to systems that automate and structure the pipelining. <br />
 
-
+ 	<h3> Code </h3>
 ```cpp
 struct Position {
   float x, y, z;
