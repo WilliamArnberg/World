@@ -8,3 +8,41 @@
 ✔️ Write free floating queries or add functions to systems that automate and structure the pipelining. <br />
 
 
+```cpp
+struct Position {
+  float x, y, z;
+};
+
+struct Rotation {
+  Quaternion quat;
+};
+
+struct Scale {
+  float x, y, z;
+};
+
+int main(int argc, char *argv[]) {
+using namespace ecs;
+World world;
+
+auto entity = world.Create();
+entity.AddComponent<Position>();
+entity.AddComponent<Rotation>();
+entity.AddComponent<Scale>();
+
+world.system("Example",[&world]()
+{
+   for(auto e : world.query<Position,Rotation,Scale>())
+   {
+       auto pos = e.GetComponent<Position>();
+       auto rot = e.GetComponent<Rotation>();
+       auto scale = e.GetComponent<Scale>();
+       //Do something.
+
+   }
+},ecs::Pipeline::OnUpdate);
+
+while(world.progress()){}; 
+
+}
+```
