@@ -21,28 +21,29 @@ struct Scale {
   float x, y, z;
 };
 
-int main(int argc, char *argv[]) {
-using namespace ecs;
-World world;
-
-auto entity = world.Create();
-entity.AddComponent<Position>();
-entity.AddComponent<Rotation>();
-entity.AddComponent<Scale>();
-
-world.system("Example",[&world]()
+int main(int argc, char *argv[])
 {
-   for(auto e : world.query<Position,Rotation,Scale>())
-   {
-       auto pos = e.GetComponent<Position>();
-       auto rot = e.GetComponent<Rotation>();
-       auto scale = e.GetComponent<Scale>();
-       //Do something.
+  using namespace ecs;
+  World world;
 
-   }
-},ecs::Pipeline::OnUpdate);
-
-while(world.progress()){}; 
+  auto entity = world.Create();
+  entity.AddComponent<Position>();
+  entity.AddComponent<Rotation>();
+  entity.AddComponent<Scale>();
+  
+  world.system("Example",[&world]()
+  {
+     for(auto e : world.query<Position,Rotation,Scale>())
+     {
+         auto pos = e.GetComponent<Position>();
+         auto rot = e.GetComponent<Rotation>();
+         auto scale = e.GetComponent<Scale>();
+         //Do something.
+  
+     }
+  },ecs::Pipeline::OnUpdate);
+  
+  while(world.progress()){}; 
 
 }
 ```
