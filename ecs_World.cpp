@@ -294,41 +294,36 @@ namespace ecs {
 		}
 
 		std::vector<ecs::entity>& entities = aArchetype.GetEntityList();
+		
 		if (sourceRow != lastRow)
 		{
 			ecs::entity entityToShuffle = aArchetype.GetEntity(lastRow);
 			ecs::Record& shuffleRecord = myEntityIndex.at(entityToShuffle);
 			shuffleRecord.row = sourceRow;
 			entities.at(shuffleRecord.row) = entities.at(lastRow);
-			//aArchetype.entities[shuffleRecord.row] = aArchetype.entities[lastRow];
-
 
 			for (size_t i = 0; i < aArchetype.GetNumComponents(); i++)
 			{
-				void* sourceComponent = aArchetype.GetColumn(lastRow)->GetComponent(sourceRow);
 				auto typeData = aArchetype.GetColumn(i)->GetTypeInfo();
-				void* targetComponent = aNewArchetype.GetColumn(sourceRow)->GetComponent(aNewRow);
+
 				if (typeData.isTrivial)
 				{
-					std::memcpy(targetComponent, sourceComponent, aArchetype.GetColumn(i)->GetElementSize());
+					std::memcpy(aArchetype.GetColumn(i)->GetComponent(sourceRow), aArchetype.GetColumn(i)->GetComponent(lastRow), aArchetype.GetColumn(i)->GetElementSize());
 				}
 				else if (typeData.move)
 				{
-					typeData.move(targetComponent, sourceComponent);
+					typeData.move(aArchetype.GetColumn(i)->GetComponent(sourceRow), aArchetype.GetColumn(i)->GetComponent(lastRow));
 				}
 				else if (typeData.copy)
 				{
-					typeData.copy(targetComponent, sourceComponent);
+					typeData.copy(aArchetype.GetColumn(i)->GetComponent(sourceRow), aArchetype.GetColumn(i)->GetComponent(lastRow));
 				}
-
-
-
-				//std::memcpy(aArchetype.GetColumn(i)->GetComponent(sourceRow), aArchetype.GetColumn(i)->GetComponent(lastRow), aArchetype.GetColumn(i)->GetElementSize());
 			}
 
 		}
 
 		entities.pop_back(); // the moved entity is guaranteed to be at the end at this point so just pop it, and decrease rowcount of the archetype.
+		//}
 	}
 
 	std::ostream& ecs::operator<<(std::ostream& os, const Archetype& aArchetype)
