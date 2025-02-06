@@ -17,6 +17,7 @@ Returns an range-for iterator returning a view class to each entity in that quer
 
 ### Code
 ```cpp
+#include "World.h"
 struct Position {
   float x, y, z;
 };
