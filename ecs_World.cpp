@@ -131,9 +131,30 @@ namespace ecs {
 		return myEntityIndex.at(aEntity).archetype;
 	}
 
-	void World::InvalidateCachedQuery(CachedQueryHash aHash)
+	void World::InvalidateCachedQueryFromMove(Archetype& oldArchetype, Archetype& newArchetype)
 	{
-		myCachedQueries.erase(aHash);
+		std::lock_guard<std::mutex> lock(myMutex);
+
+		auto oldArchetypeID = oldArchetype.GetID();
+		if (myArchetypeToQueries.contains(oldArchetypeID))
+		{
+			for (const auto& queryHash : myArchetypeToQueries.at(oldArchetypeID))
+			{
+				myCachedQueries.erase(queryHash);  
+			}
+			myArchetypeToQueries.erase(oldArchetypeID);  
+		}
+
+	
+		auto newArchetypeID = newArchetype.GetID();
+		if (myArchetypeToQueries.contains(newArchetypeID))
+		{
+			for (const auto& queryHash : myArchetypeToQueries.at(newArchetypeID))
+			{
+				myCachedQueries.erase(queryHash);  
+			}
+			myArchetypeToQueries.erase(newArchetypeID);  
+		}
 	}
 
 	void World::system(const char* aName, System&& aSystem, Pipeline aPipeline) const

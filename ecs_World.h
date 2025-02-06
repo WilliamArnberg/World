@@ -187,7 +187,7 @@ namespace ecs
 		/// Invalidates a cached query by its associated hash, ensuring that future queries are recalculated.
 		/// </summary>
 		/// <param name="aHash">The hash of the cached query to invalidate.</param>
-		void InvalidateCachedQuery(CachedQueryHash aHash);
+		void InvalidateCachedQueryFromMove(Archetype& oldArchetype, Archetype& newArchetype);
 
 		template<typename... args>
 		const Archetype* GetArchetype() const;
@@ -202,7 +202,6 @@ namespace ecs
 
 		template<typename T>
 		Archetype& AddArchetype(Archetype& aArchetypeSource);
-
 		void MoveEntityFromToArchetype(Archetype& aArchetype, entity aEntity, Archetype& aNewArchetype);
 
 		template<typename T>
@@ -218,7 +217,8 @@ namespace ecs
 		std::unordered_map<Type, Archetype, TypeHash, TypeEqual> myArchetypeIndex; // Find an archetype by its list of component ids
 		std::unordered_map<entity, Record> myEntityIndex;		// Find the archetype for an entity
 		std::unordered_map<CachedQueryHash, std::vector<Archetype*>> myCachedQueries;
-		//std::unordered_map<std::string, entity> myTagToEntityIndex; //Find entity by tag if it has one.
+
+		std::unordered_map<ArchetypeID, std::unordered_set<CachedQueryHash>> myArchetypeToQueries;
 
 		std::unordered_map<ArchetypeID, size_t> myClearOnLoadIndex;
 		std::vector<const Type*> myClearOnLoadArchetypeList;
@@ -291,9 +291,9 @@ namespace ecs
 	template <typename T>
 	T* World::GetComponent(entity e)
 	{
-		std::lock_guard<std::mutex> lock(myMutex); //There are no guarantees for this making it thread-safe since if immediately after this gets unnlocked someones adds a component and the data moves the pointer will be invalid no matter what.
+		std::lock_guard<std::mutex> lock(myMutex); //There are no guarantees for this making it thread-safe since if immediately after this gets unlocked someones adds a component and the data moves the pointer will be invalid no matter what.
 		if (std::is_empty<T>()) return nullptr; //You cannot fetch tags
-		//if (!myEntityIndex.contains(e)) return nullptr;
+		if (!myEntityIndex.contains(e)) return nullptr;
 		Record& record = myEntityIndex.at(e);
 		if (!record.archetype->HasComponent(GetComponentID<T>())) return nullptr;
 		ArchetypeMap& archetypeMap = myComponentIndex[GetComponentID<T>()];
@@ -312,31 +312,31 @@ namespace ecs
 	template <typename ... Components>
 	QueryIterator World::Query()
 	{
-
 		std::lock_guard<std::mutex> lock(myMutex);
-		std::vector<Archetype*> archetypeArray;
-		Type types;
-		types = { std::type_index(typeid(Components))... };
+		std::unordered_set<Archetype*> archetypeSet;  
+		Type types = { std::type_index(typeid(Components))... };
 		std::sort(types.begin(), types.end());
-		/*size_t hash = 0;
-		for(auto& type : types)
+		size_t hash = 0;
+		for (auto& type : types)
 		{
-			JPH::HashCombine(hash,type);
+			JPH::HashCombine(hash, type.hash_code());
 		}
-		if(myCachedQueries.contains(hash))
+
+		
+		if (myCachedQueries.contains(hash))
 		{
 			return QueryIterator(this, myCachedQueries.at(hash));
-		}*/
+		}
 
 		if (!myComponentIndex.contains(types[0]))
 		{
 			return QueryIterator();
 		}
+
 		auto& archetypeMap = myComponentIndex.at(types[0]);
 		for (const auto& record : archetypeMap)
 		{
 			size_t found = 1;
-
 			for (int i = 1; i < types.size(); i++)
 			{
 				ComponentID type = types[i];
@@ -352,18 +352,24 @@ namespace ecs
 
 			if (found == types.size() && 0 < record.second.archetype->GetNumEntities())
 			{
-
-				archetypeArray.push_back(record.second.archetype);
+				archetypeSet.insert(record.second.archetype);  
 			}
 		}
 
-		if (!archetypeArray.empty())
+		if (!archetypeSet.empty())
 		{
-			//myCachedQueries.emplace(hash,archetypeArray);
-			return QueryIterator(this, archetypeArray);
+			std::vector<Archetype*> archetypeVector(archetypeSet.begin(), archetypeSet.end());
+			myCachedQueries.emplace(hash, archetypeVector); 
+			for (auto* archetype : archetypeVector)
+			{
+				myArchetypeToQueries[archetype->GetID()].insert(hash);
+			}
+			return QueryIterator(this, archetypeVector);  
 		}
+
 		return QueryIterator();
 	}
+
 
 	template<typename ...Components, typename ...Filter>
 	inline QueryIterator World::FilteredQuery(std::tuple<Filter...> filters)
