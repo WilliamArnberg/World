@@ -108,10 +108,6 @@ namespace ecs {
 				{
 					typeData.copy(targetComponent, sourceComponent);
 				}
-
-
-
-				//std::memcpy(aArchetype.GetColumn(i)->GetComponent(sourceRow), aArchetype.GetColumn(i)->GetComponent(lastRow), aArchetype.GetColumn(i)->GetElementSize());
 			}
 		}
 
@@ -120,24 +116,6 @@ namespace ecs {
 		return true;
 	}
 
-	/*ecs::Entity ecs::World::Create(const char* aTag)
-	{
-		Entity e = Create();
-		myTagToEntityIndex.emplace(aTag, e.GetID());
-		return e;
-	}*/
-
-	//void World::TagEntity(const char* aTag, entity aEntity)
-	//{
-	//	myTagToEntityIndex.emplace(aTag, aEntity);
-	//}
-
-	//Entity World::GetEntity(const char* aTag)
-	//{
-
-	//	entity e = myTagToEntityIndex.at(aTag);
-	//	return Entity(e, this);
-	//}
 
 	Entity World::GetEntity(entity id)
 	{
@@ -148,9 +126,14 @@ namespace ecs {
 		return Entity(id, this);
 	}
 
-	ecs::Archetype* ecs::World::GetArchetype(entity aEntity)
+	const ecs::Archetype* ecs::World::GetArchetype(entity aEntity) const
 	{
 		return myEntityIndex.at(aEntity).archetype;
+	}
+
+	void World::InvalidateCachedQuery(CachedQueryHash aHash)
+	{
+		myCachedQueries.erase(aHash);
 	}
 
 	void World::system(const char* aName, System&& aSystem, Pipeline aPipeline) const
@@ -202,9 +185,14 @@ namespace ecs {
 		return cleanUp;
 	}
 
-	void World::Progress()
+	bool World::Progress()
 	{
-		mySystems->Progress();
+		return mySystems->Progress();
+	}
+
+	void World::Quit()
+	{
+		mySystems->Quit();
 	}
 
 	ecs::entity World::GenerateID()
@@ -294,7 +282,7 @@ namespace ecs {
 		}
 
 		std::vector<ecs::entity>& entities = aArchetype.GetEntityList();
-		
+
 		if (sourceRow != lastRow)
 		{
 			ecs::entity entityToShuffle = aArchetype.GetEntity(lastRow);

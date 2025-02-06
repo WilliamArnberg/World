@@ -28,7 +28,7 @@ namespace ecs
 	class QueryIterator;
 	template<typename T>
 	inline ComponentID GetComponentID();
-
+	using CachedQueryHash = size_t;
 #undef max
 	constexpr int MAX_ENTITIES = 0xFFFFF;
 	class World
@@ -39,56 +39,165 @@ namespace ecs
 		World();
 		~World();
 
+		/// <summary>
+		/// Creates an Empty Entity
+		/// </summary>
+		/// <returns>"Entity View Class"</returns>
 		Entity Create();
 
+		/// <summary>
+		/// Destroys the passed entity along with all it's components.
+		/// </summary>
+		/// <param name="e"> Entity ID </param>
+		/// <returns>"True if entity was successfully destroyed, if the entity doesn't exist returns false"</returns>
 		bool DestroyEntity(ecs::entity id);
 
+		/// <summary>
+		/// Get a Entity View class
+		/// </summary>
+		/// <param name="e"> Entity ID </param>
+		/// <returns>"Entity View Class"</returns>
 		Entity GetEntity(entity id);
-		
 
-		template<typename... args>
-		Archetype* GetArchetype();
-
-		Archetype* GetArchetype(entity id);
-
-		template<typename T> 
+		/// <summary>
+		/// Check if a entity has a given component type.
+		/// </summary>
+		/// <param name="e"> Entity ID </param>
+		/// <returns>"Returns true if Entity has the component else false"</returns>
+		template<typename T>
 		bool HasComponent(entity e) const;
 
+		/// <summary>
+		/// Get Component from Entity.
+		/// </summary>
+		/// <param name="e"> Entity ID </param>
+		/// <returns>"Returns pointer to component if it exists, else nullptr. If Component is a tag it will return nullptr "</returns>
 		template<typename T>
 		T* GetComponent(entity e);
 
-		template<typename... args>
+		/// <summary>
+		/// Query for entities
+		/// </summary>
+		/// <param name="Components">The component types to query for. These are template parameter packs, not runtime parameters.</param>
+		/// <returns>"Returns an range based iterator with all entities of specified types."</returns>
+		template<typename... Components>
 		QueryIterator Query();
 
+		/// <summary>
+		/// Query for entities
+		/// </summary>
+		/// <param name="Components">The component types to query for. These are template parameter packs, not runtime parameters.</param>
+		/// <param name="filters">An tuple filled with just the component types to filter out from the query. </param>
+		/// <returns>"Returns an range based iterator with all entities of specified types."</returns>
 		template<typename... Components, typename... Filter>
-		inline QueryIterator FilteredQuery(std::tuple<Filter...> filters);
+		inline QueryIterator FilteredQuery(std::tuple<Filter...> aFilters);
 
+
+		/// <summary>
+		/// Query for one entity using a tag. A tag is an empty struct added as an component.
+		/// </summary>
+		/// <param name="T"> The tag type to query for.</param>
+		/// <returns>"Entity View Class"</returns>
 		template<typename T>
 		Entity TQuery();
 
+		/// <summary>
+		/// Add Component to Entity, note that adding components to entities moves them physically in memory. 
+		/// Don't store pointers to components as they risk being invalidated.
+		/// </summary>
+		/// <param name="e"> Entity ID </param>
+		/// <returns>"Returns a pointer to the added component. "</returns>
 		template<typename T>
 		T* AddComponent(entity e);
 
+		/// <summary>
+		/// Remove Component from Entity, note that adding components to entities moves them physically in memory. 
+		/// </summary>
+		/// <param name="e"> Entity ID </param>
 		template<typename T>
 		void RemoveComponent(entity e);
 
+		/// <summary>
+		/// Sets a component of type <typeparamref name="T"/> for the specified entity.
+		/// </summary>
+		/// <param name="aEntity">The ID of the entity to set the component for.</param>
+		/// <param name="aArgumentList">The arguments required to construct or initialize the component of type <typeparamref name="T"/>.</param>
 		template<typename T, typename...args>
 		void Set(entity aEntity, args&&... aArgumentList);
-
+		/// <summary>
+		/// Registers a system with the given name and pipeline stage.
+		/// </summary>
+		/// <param name="aName">The name of the system being registered.</param>
+		/// <param name="aSystem">The system (function or callable) to be registered. This is a forwarding reference for a callable object.</param>
+		/// <param name="aPipeline">The pipeline stage at which the system should run. Defaults to <see cref="Pipeline::OnUpdate"/>.</param>
 		void system(const char* aName, System&& aSystem, Pipeline aPipeline = Pipeline::OnUpdate) const;
 
+		/// <summary>
+		/// Observes changes to the specified entity and triggers the provided callback function based on the specified observer type.
+		/// </summary>
+		/// <param name="aEntity">The entity to observe for changes.</param>
+		/// <param name="aFunc">A callable (function, lambda, etc.) that will be triggered when the entity’s state changes. This is a forwarding reference for any callable type.</param>
+		/// <param name="aType">The type of observation. Specifies what kind of changes to observe (e.g., add, remove, update).</param>
 		template<typename T, typename Func>
 		void Observe(entity aEntity, Func&& aFunc, ObserverType aType);
 
-			template<typename T>
-		void EnableComponent(ecs::entity aEntityID,bool isEnabled);
+		template<typename T>
+		void EnableComponent(ecs::entity aEntityID, bool isEnabled);
 
-		//This clears the whole ecs level
+		/// <summary>
+		/// Clears the entire Entity Component System (ECS), removing all entities and components.
+		/// </summary>
+		/// <remarks>
+		/// This function will destroy all entities and components, effectively resetting the ECS to an empty state.
+		/// It is irreversible, and all data within the ECS will be lost after calling this function.
+		/// </remarks>		
 		void Clear();
-		CleanUp ClearOnLoad();
-		void Progress();
 
+		/// <summary>
+		/// Prepares and returns objects for other systems to clean up when clearing the ECS between levels during runtime.
+		/// </summary>
+		/// <returns>
+		/// A struct containing the necessary objects for other systems to perform cleanup tasks.
+		/// </returns>
+		CleanUp ClearOnLoad();
+
+		/// <summary>
+		/// Progresses all systems in the ECS, typically used in a game loop or during time-based updates.
+		/// </summary>
+		/// <returns>
+		/// Returns `true` if there are still systems to progress, or `false` if a system quit call have been made.
+		/// </returns
+		bool Progress();
+
+		/// <summary>
+		/// Tells the systems to quit, will enter OnQuit at the end of progress.
+		/// </summary>
+		void Quit();
+
+		/// <summary>
+		/// Retrieves a view-only pointer to the archetype associated with the specified entity.
+		/// </summary>
+		/// <param name="id">The entity ID for which the archetype is being retrieved.</param>
+		/// <returns>
+		/// A pointer to the <see cref="Archetype"/> associated with the given entity, or `nullptr` if the entity does not have an associated archetype.
+		/// </returns>
+		const Archetype* GetArchetype(entity id) const;
 	private:
+		/// <summary>
+		/// Invalidates a cached query by its associated hash, ensuring that future queries are recalculated.
+		/// </summary>
+		/// <param name="aHash">The hash of the cached query to invalidate.</param>
+		void InvalidateCachedQuery(CachedQueryHash aHash);
+
+		template<typename... args>
+		const Archetype* GetArchetype() const;
+
+		/// <summary>
+		/// Generates a new unique entity ID.
+		/// </summary>
+		/// <returns>
+		/// A unique `entity` ID that can be used to identify an entity in the ECS.
+		/// </returns>
 		ecs::entity GenerateID();
 
 		template<typename T>
@@ -108,7 +217,7 @@ namespace ecs
 		std::unordered_map<ComponentID, ArchetypeMap> myComponentIndex; // Used to lookup components in archetypes
 		std::unordered_map<Type, Archetype, TypeHash, TypeEqual> myArchetypeIndex; // Find an archetype by its list of component ids
 		std::unordered_map<entity, Record> myEntityIndex;		// Find the archetype for an entity
-
+		std::unordered_map<CachedQueryHash, std::vector<Archetype*>> myCachedQueries;
 		//std::unordered_map<std::string, entity> myTagToEntityIndex; //Find entity by tag if it has one.
 
 		std::unordered_map<ArchetypeID, size_t> myClearOnLoadIndex;
@@ -138,6 +247,7 @@ namespace ecs
 		typeInfo.size = sizeof(T);
 		typeInfo.alignment = alignof(T);
 		typeInfo.typeID = typeid(T);
+
 		// Default constructor
 		typeInfo.construct = std::is_default_constructible_v<T> ?
 			[](void* dest) { new (dest) T(); } : nullptr;
@@ -161,7 +271,7 @@ namespace ecs
 	}
 
 	template <typename ... args>
-	Archetype* World::GetArchetype()
+	const Archetype* World::GetArchetype() const
 	{
 		Type componentTypes = { std::type_index(typeid(args))... };
 		std::sort(componentTypes.begin(), componentTypes.end());
@@ -199,15 +309,25 @@ namespace ecs
 		return component;
 	}
 
-	template <typename ... args>
+	template <typename ... Components>
 	QueryIterator World::Query()
 	{
 
 		std::lock_guard<std::mutex> lock(myMutex);
 		std::vector<Archetype*> archetypeArray;
 		Type types;
-		types = { std::type_index(typeid(args))... };
+		types = { std::type_index(typeid(Components))... };
 		std::sort(types.begin(), types.end());
+		/*size_t hash = 0;
+		for(auto& type : types)
+		{
+			JPH::HashCombine(hash,type);
+		}
+		if(myCachedQueries.contains(hash))
+		{
+			return QueryIterator(this, myCachedQueries.at(hash));
+		}*/
+
 		if (!myComponentIndex.contains(types[0]))
 		{
 			return QueryIterator();
@@ -239,6 +359,7 @@ namespace ecs
 
 		if (!archetypeArray.empty())
 		{
+			//myCachedQueries.emplace(hash,archetypeArray);
 			return QueryIterator(this, archetypeArray);
 		}
 		return QueryIterator();
@@ -349,7 +470,7 @@ namespace ecs
 		ArchetypeMap& am = myComponentIndex.at(componentID);
 		ArchetypeRecord& archetypeRecord = am.at(nextArchetypeID);
 
-		assert(nextArchetype.GetColumn(archetypeRecord.columnIndex)->GetTypeInfo().typeID == typeid(T),"This component is not the right type, imminent pagefault.");
+		assert(nextArchetype.GetColumn(archetypeRecord.columnIndex)->GetTypeInfo().typeID == typeid(T), "This component is not the right type, imminent pagefault.");
 
 		void* targetComponent = nextArchetype.GetColumn(archetypeRecord.columnIndex)->GetComponent(record.row);
 		nextArchetype.GetColumn(archetypeRecord.columnIndex)->ChangeMemoryUsed(1);
@@ -363,7 +484,7 @@ namespace ecs
 	{
 		auto& record = myEntityIndex.at(e);
 		if (!record.archetype || !record.archetype->Contains(std::tuple<T>())) return;
-		
+
 		ArchetypeEdge& edges = record.archetype->GetOrAddEdge(GetComponentID<T>());
 		if (edges.removeArchetypes)
 		{
@@ -371,7 +492,7 @@ namespace ecs
 		}
 		else
 		{
-			
+
 			Type newType = record.archetype->GetType();
 			int found = 0;
 			for (ComponentID& t : newType)
@@ -403,7 +524,7 @@ namespace ecs
 				size_t numComponents{ 0 };
 				bool isTag = false;
 				int columnIndex = 0;
-				ArchetypeID sourceArchetype  = record.archetype->GetID();
+				ArchetypeID sourceArchetype = record.archetype->GetID();
 				for (int i = 0; i < newType.size(); ++i)
 				{
 					newArchetype.AddComponentIDToTypeSet(newType[i]);
@@ -439,13 +560,13 @@ namespace ecs
 				//Copying over component structure from old archetype to new archetype, no data is copied at this point.
 				//Only copying meta data for component structure 
 				size_t maxCount = 2;
-				newArchetype.ReserveComponentsSize(record.archetype->GetNumComponents() - 1);
+				newArchetype.ReserveComponentsSize(record.archetype->GetNumComponents());
 				newArchetype.SetMaxCount(maxCount);
 
 				for (int i = 0; i < newArchetype.GetComponentCapacity(); i++)
 				{
 					newArchetype.AddEmptyComp();
-					
+
 				}
 
 				for (int i = 0; i < record.archetype->GetNumTypes(); i++)
@@ -458,7 +579,7 @@ namespace ecs
 					if (sourceColumnIndex == -1 || targetColumnIndex == -1) continue; //Its a tag
 
 					newArchetype.GetColumn(targetColumnIndex)->AssignTypeInfo(record.archetype->GetColumn(sourceColumnIndex)->GetTypeInfo());
-					
+
 					size_t elementSize = newArchetype.GetColumn(targetColumnIndex)->GetElementSize();
 					newArchetype.GetColumn(targetColumnIndex)->Reset(new std::byte[elementSize * maxCount]);
 					newArchetype.GetColumn(targetColumnIndex)->SetCapacity(maxCount * elementSize);
@@ -466,7 +587,7 @@ namespace ecs
 
 				ArchetypeEdge& edge = record.archetype->GetEdge(componentID);
 				edge.removeArchetypes = &myArchetypeIndex[newType];
-				
+
 				newArchetype.GetOrAddEdge(componentID).removeArchetypes = nullptr;
 				newArchetype.GetOrAddEdge(componentID).addArchetypes = record.archetype;
 
@@ -506,9 +627,9 @@ namespace ecs
 	{
 	}
 
-	
 
-	
+
+
 	template <typename T>
 	Archetype& World::AddArchetype(Archetype& aArchetypeSource)
 	{

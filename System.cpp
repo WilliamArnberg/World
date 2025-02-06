@@ -2,7 +2,7 @@
 #include "World.h"
 
 
-void ecs::SystemManager::Progress()
+bool ecs::SystemManager::Progress()
 {
 	if (!myIsStarted)
 	{
@@ -33,6 +33,13 @@ void ecs::SystemManager::Progress()
 	DebugPostRender();
 #endif
 	PostRender();
+	if(myShouldQuit)
+	{
+		OnQuit();
+		return false;
+	}
+	return true;
+
 }
 
 void ecs::SystemManager::AddSystem(const System&& aSystem, const char* aName, Pipeline aPipeline)
@@ -68,6 +75,11 @@ void ecs::SystemManager::RemoveSystem(const char* aName, Pipeline aPipeline)
 	systemVec.pop_back();
 }
 
+void ecs::SystemManager::Quit()
+{
+	myShouldQuit = true;
+}
+
 void ecs::SystemManager::DebugOnUpdate()
 {
 	for (auto& system : myPipelines[Pipeline::DebugUpdate].second)
@@ -87,6 +99,14 @@ void ecs::SystemManager::DebugOnStart()
 void ecs::SystemManager::UIRender()
 {
 	for (auto& system : myPipelines[Pipeline::UIRender].second)
+	{
+		system();
+	}
+}
+
+void ecs::SystemManager::OnQuit()
+{
+	for (auto& system : myPipelines[Pipeline::OnQuit].second)
 	{
 		system();
 	}

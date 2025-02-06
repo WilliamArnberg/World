@@ -19,6 +19,7 @@ namespace ecs {
 		Render,		//Renders the scene
 		UIRender,
 		PostRender, //EndFrame Cleanup
+		OnQuit,
 
 		DebugStart,
 		DebugPreUpdate,
@@ -40,12 +41,13 @@ namespace ecs {
 	class SystemManager
 	{
 	public:
-		void PostRender();
-		void Progress();
+		bool Progress();
 		void AddSystem(const System&& aSystem, const char* aName, Pipeline aPipeline = Pipeline::OnUpdate);
 		void RemoveSystem(const char* aName, Pipeline aPipeline);
-
+		void Quit();
 	private:
+		
+		void PostRender();
 		void DebugOnStart();
 		void OnStart();
 		void OnLoad();
@@ -56,6 +58,7 @@ namespace ecs {
 		void PreRender();
 		void Render();
 		void UIRender();
+		void OnQuit();
 
 		void DebugOnUpdate();
 		void DebugPreUpdate();
@@ -64,7 +67,7 @@ namespace ecs {
 
 		std::unordered_map <Pipeline, std::pair<std::string, std::vector<System>>> myPipelines;
 		std::unordered_map<std::pair<std::string,Pipeline>, size_t,PairHash> mySystemIndex;
-
+		bool myShouldQuit = false;
 		bool myIsStarted = false;
 #ifndef _RETAIL
 		bool myDebugIsStarted = false;

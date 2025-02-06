@@ -114,7 +114,7 @@ namespace ecs
 
 	std::ostream& ecs::operator<<(std::ostream& os, const Entity& aEntity)
 	{
-		Archetype* archetype = aEntity.myWorld->GetArchetype(aEntity.GetID());
+		const Archetype* archetype = aEntity.myWorld->GetArchetype(aEntity.GetID());
 		os << "\n" << "***********************************" << "\n";
 		os << "Entity ID: " << aEntity.myID << "\n";
 		os << "Archetype ID: " << archetype->GetID() << "\n";
