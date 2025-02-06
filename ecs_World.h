@@ -7,7 +7,6 @@
 #include <bitset>
 #include <iostream>
 #include <memory>
-#include <span>
 #include <stack>
 #include <mutex>
 #include <string>
@@ -19,8 +18,7 @@
 #include "Archetype.h"
 #include "Ecs_Aliases.h"
 #include "CleanUpContainer.h"
-#include <variant>
-#include <pix/pix3.h>
+
 namespace ecs
 {
 	class Entity;
@@ -30,7 +28,6 @@ namespace ecs
 	inline ComponentID GetComponentID();
 	using CachedQueryHash = size_t;
 #undef max
-	constexpr int MAX_ENTITIES = 0xFFFFF;
 	class World
 	{
 	public:
