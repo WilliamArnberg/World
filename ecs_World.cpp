@@ -206,7 +206,8 @@ namespace ecs {
 				myEntityIndex.erase(e);
 			}
 		}
-		
+		myCachedQueries.clear();
+		myArchetypeToQueries.clear();
 		myClearOnLoadArchetypeList.clear();
 		myClearOnLoadIndex.clear();
 		return cleanUp;
