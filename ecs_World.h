@@ -184,7 +184,7 @@ namespace ecs
 		/// Invalidates a cached query by its associated hash, ensuring that future queries are recalculated.
 		/// </summary>
 		/// <param name="aHash">The hash of the cached query to invalidate.</param>
-		void InvalidateCachedQueryFromMove(Archetype& oldArchetype, Archetype& newArchetype);
+		void InvalidateCachedQueryFromMove(Archetype* oldArchetype, Archetype* newArchetype);
 
 		template<typename... args>
 		const Archetype* GetArchetype() const;
@@ -527,12 +527,13 @@ namespace ecs
 				size_t numComponents{ 0 };
 				bool isTag = false;
 				int columnIndex = 0;
-				ArchetypeID sourceArchetype = record.archetype->GetID();
+				Archetype* sourceArchetype = record.archetype;
+				ArchetypeID sourceArchetypeID = record.archetype->GetID();
 				for (int i = 0; i < newType.size(); ++i)
 				{
 					newArchetype.AddComponentIDToTypeSet(newType[i]);
 					ArchetypeMap& am = myComponentIndex[newType[i]];
-					am[sourceArchetype].columnIndex < 0 ? isTag = true : isTag = false;
+					am[sourceArchetypeID].columnIndex < 0 ? isTag = true : isTag = false;
 
 					if (isTag)
 					{
@@ -587,7 +588,7 @@ namespace ecs
 					newArchetype.GetColumn(targetColumnIndex)->Reset(new std::byte[elementSize * maxCount]);
 					newArchetype.GetColumn(targetColumnIndex)->SetCapacity(maxCount * elementSize);
 				}
-
+				InvalidateCachedQueryFromMove(sourceArchetype,&newArchetype);
 				ArchetypeEdge& edge = record.archetype->GetEdge(componentID);
 				edge.removeArchetypes = &myArchetypeIndex[newType];
 

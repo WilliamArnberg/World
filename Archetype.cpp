@@ -96,7 +96,7 @@ namespace ecs
 		{
 			comp.SetCapacity(myMaxCount * comp.GetElementSize());
 			comp.Reset(nullptr);
-			comp.Reset(new std::byte[comp.GetElementSize() * comp.GetCapacity()]);
+			comp.Reset(new std::byte[comp.GetCapacity()]);
 
 			comp.ChangeMemoryUsed(-myPreviousCount);
 		}
@@ -188,6 +188,7 @@ namespace ecs
 
 	void ecs::Column::Reset(std::byte* aBuffer)
 	{
+		
 		myBuffer.reset(aBuffer);
 	}
 

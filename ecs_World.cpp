@@ -110,6 +110,7 @@ namespace ecs {
 				}
 			}
 		}
+		InvalidateCachedQueryFromMove(&archetype, nullptr);
 
 		myEntityIndex.erase(id);
 		entities.pop_back();
@@ -131,29 +132,33 @@ namespace ecs {
 		return myEntityIndex.at(aEntity).archetype;
 	}
 
-	void World::InvalidateCachedQueryFromMove(Archetype& oldArchetype, Archetype& newArchetype)
+	void World::InvalidateCachedQueryFromMove(Archetype* oldArchetype, Archetype* newArchetype)
 	{
-		std::lock_guard<std::mutex> lock(myMutex);
-
-		auto oldArchetypeID = oldArchetype.GetID();
-		if (myArchetypeToQueries.contains(oldArchetypeID))
+		if (oldArchetype)
 		{
-			for (const auto& queryHash : myArchetypeToQueries.at(oldArchetypeID))
+
+			auto oldArchetypeID = oldArchetype->GetID();
+			if (myArchetypeToQueries.contains(oldArchetypeID))
 			{
-				myCachedQueries.erase(queryHash);  
+				for (const auto& queryHash : myArchetypeToQueries.at(oldArchetypeID))
+				{
+					myCachedQueries.erase(queryHash);
+				}
+				myArchetypeToQueries.erase(oldArchetypeID);
 			}
-			myArchetypeToQueries.erase(oldArchetypeID);  
 		}
 
-	
-		auto newArchetypeID = newArchetype.GetID();
-		if (myArchetypeToQueries.contains(newArchetypeID))
+		if (newArchetype)
 		{
-			for (const auto& queryHash : myArchetypeToQueries.at(newArchetypeID))
+			auto newArchetypeID = newArchetype->GetID();
+			if (myArchetypeToQueries.contains(newArchetypeID))
 			{
-				myCachedQueries.erase(queryHash);  
+				for (const auto& queryHash : myArchetypeToQueries.at(newArchetypeID))
+				{
+					myCachedQueries.erase(queryHash);
+				}
+				myArchetypeToQueries.erase(newArchetypeID);
 			}
-			myArchetypeToQueries.erase(newArchetypeID);  
 		}
 	}
 
@@ -201,6 +206,7 @@ namespace ecs {
 				myEntityIndex.erase(e);
 			}
 		}
+		
 		myClearOnLoadArchetypeList.clear();
 		myClearOnLoadIndex.clear();
 		return cleanUp;
@@ -228,6 +234,7 @@ namespace ecs {
 
 	void ecs::World::MoveEntityFromToArchetype(Archetype& aArchetype, entity aEntity, Archetype& aNewArchetype)
 	{
+		InvalidateCachedQueryFromMove(&aArchetype,&aNewArchetype);
 		Record& record = myEntityIndex.at(aEntity);
 		assert(record.archetype, "Archetype was null");
 		aNewArchetype.AddEntity(aEntity); // the archetype count increases by 1
