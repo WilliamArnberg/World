@@ -47,71 +47,63 @@ namespace ecs
 		void (*destruct)(void* obj) = nullptr;						// Destructor
 		bool isTrivial = false;
 
-		 // Default constructor
     ComponentTypeInfo()
         : typeID(typeid(nullptr)), size(0), alignment(0), construct(nullptr), copy(nullptr), 
           move(nullptr), destruct(nullptr), isTrivial(false) {}
 
-    // Copy constructor
-    ComponentTypeInfo(const ComponentTypeInfo& other)
-        : typeID(other.typeID), size(other.size), alignment(other.alignment),
-          construct(other.construct), copy(other.copy), move(other.move),
-          destruct(other.destruct), isTrivial(other.isTrivial) {}
+    ComponentTypeInfo(const ComponentTypeInfo& aOther)
+        : typeID(aOther.typeID), size(aOther.size), alignment(aOther.alignment),
+          construct(aOther.construct), copy(aOther.copy), move(aOther.move),
+          destruct(aOther.destruct), isTrivial(aOther.isTrivial) {}
 
-    // Move constructor
-    ComponentTypeInfo(ComponentTypeInfo&& other) noexcept
-        : typeID(other.typeID), size(other.size), alignment(other.alignment),
-          construct(other.construct), copy(other.copy), move(other.move),
-          destruct(other.destruct), isTrivial(other.isTrivial)
+    ComponentTypeInfo(ComponentTypeInfo&& aOther) noexcept
+        : typeID(aOther.typeID), size(aOther.size), alignment(aOther.alignment),
+          construct(aOther.construct), copy(aOther.copy), move(aOther.move),
+          destruct(aOther.destruct), isTrivial(aOther.isTrivial)
     {
-        // Null out the other object's pointers to prevent accidental use
-        other.construct = nullptr;
-        other.copy = nullptr;
-        other.move = nullptr;
-        other.destruct = nullptr;
-        other.isTrivial = false;
+        aOther.construct = nullptr;
+        aOther.copy = nullptr;
+        aOther.move = nullptr;
+        aOther.destruct = nullptr;
+        aOther.isTrivial = false;
     }
 
-	// Copy assignment operator
-    ComponentTypeInfo& operator=(const ComponentTypeInfo& other)
+    ComponentTypeInfo& operator=(const ComponentTypeInfo& aOther)
     {
-        if (this != &other)  // Check for self-assignment
+        if (this != &aOther)  
         {
-            // Copy members from 'other' to 'this'
-            typeID = other.typeID;
-            size = other.size;
-            alignment = other.alignment;
-            construct = other.construct;
-            copy = other.copy;
-            move = other.move;
-            destruct = other.destruct;
-            isTrivial = other.isTrivial;
+            
+            typeID = aOther.typeID;
+            size = aOther.size;
+            alignment = aOther.alignment;
+            construct = aOther.construct;
+            copy = aOther.copy;
+            move = aOther.move;
+            destruct = aOther.destruct;
+            isTrivial = aOther.isTrivial;
         }
         return *this;
     }
 
 
-	// Move assignment operator
-    ComponentTypeInfo& operator=(ComponentTypeInfo&& other) noexcept
+    ComponentTypeInfo& operator=(ComponentTypeInfo&& aOther) noexcept
     {
-        if (this != &other)  // Check for self-assignment
+        if (this != &aOther)  
         {
-            // Move members from 'other' to 'this'
-            typeID = other.typeID;
-            size = other.size;
-            alignment = other.alignment;
-            construct = other.construct;
-            copy = other.copy;
-            move = other.move;
-            destruct = other.destruct;
-            isTrivial = other.isTrivial;
+            typeID = aOther.typeID;
+            size = aOther.size;
+            alignment = aOther.alignment;
+            construct = aOther.construct;
+            copy = aOther.copy;
+            move = aOther.move;
+            destruct = aOther.destruct;
+            isTrivial = aOther.isTrivial;
 
-            // Null out the other object's pointers to prevent accidental use
-            other.construct = nullptr;
-            other.copy = nullptr;
-            other.move = nullptr;
-            other.destruct = nullptr;
-            other.isTrivial = false;
+            aOther.construct = nullptr;
+            aOther.copy = nullptr;
+            aOther.move = nullptr;
+            aOther.destruct = nullptr;
+            aOther.isTrivial = false;
         }
         return *this;
     }
@@ -129,7 +121,6 @@ namespace ecs
 		Column(Column&& other) noexcept
 		{
 			myBuffer = std::move(other.myBuffer);
-			//elementSize = other.elementSize;
 			myCapacity = other.myCapacity;
 			myCurrentMemoryUsed = other.myCurrentMemoryUsed;
 			myTypeInfo = other.myTypeInfo;
@@ -139,7 +130,6 @@ namespace ecs
 			if (this != &other)
 			{
 				myBuffer = std::move(other.myBuffer);
-				//elementSize = other.elementSize;
 				myCapacity = other.myCapacity;
 				myCurrentMemoryUsed = other.myCurrentMemoryUsed;
 				myTypeInfo = other.myTypeInfo;
@@ -149,7 +139,6 @@ namespace ecs
 		Column(const Column& aOther)
 		{
 			myBuffer.reset(aOther.myBuffer.get());
-			//elementSize = other.elementSize;
 			myCapacity = aOther.myCapacity;
 			myCurrentMemoryUsed = aOther.myCurrentMemoryUsed;
 			myTypeInfo = aOther.myTypeInfo;

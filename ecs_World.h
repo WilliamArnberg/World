@@ -207,7 +207,7 @@ namespace ecs
 		template<typename T>
 		ComponentTypeInfo RegisterComponent();
 
-		//archetype Data
+		
 		std::mutex myMutex;
 		uint64_t myEntityIndexCounter = 1;
 		std::unordered_map<ComponentID, ArchetypeMap> myComponentIndex; // Used to lookup components in archetypes
