@@ -15,16 +15,16 @@ Returns an range-for iterator returning a view class to each entity in that quer
 ✔️ Cached Queries, that only gets reset if the underlying memory of the archetype changes. <br />
 
 ## Core Concepts
-##### Entity
+### Entity
 ```cpp
     using entity = uint64_t;
 ```
 An entity is a unique identifier that represents a game object. It does not contain any data or logic itself but serves as a reference for components.
 
-##### Components
+### Components
 Components are user created [POD](https://learn.microsoft.com/en-us/cpp/cpp/trivial-standard-layout-and-pod-types?view=msvc-170#pod-types) or Non-POD data structures that store information about an entity. 
 
-#### Component Storage
+### Component Storage
 
 Each Component type is stored in a column which consists of a contiguous data buffer, and type-erasure information.
 
