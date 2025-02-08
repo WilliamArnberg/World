@@ -38,7 +38,7 @@ class Column
 }
 ```
 The Type erasure data each column hold is filled up automatically when the user calls `AddComponent<T>();` 
-Storing type-erased constructors enables us to use modern C++ functionalities.
+Storing type-erased constructors enables the usage of modern C++ functionalities.
 ```cpp
 struct ComponentTypeInfo
 {
