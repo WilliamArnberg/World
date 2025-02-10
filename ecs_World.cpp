@@ -177,7 +177,7 @@ namespace ecs {
 
 	}
 
-	CleanUp World::ClearOnLoad()
+	CleanUp World::PrepareCleanupForLevelLoad()
 	{
 		std::vector<std::vector<ecs::EntityID>> entitiesToRemove;
 		CleanUp cleanUp{};

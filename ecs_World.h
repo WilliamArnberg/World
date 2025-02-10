@@ -108,7 +108,7 @@ namespace ecs
 		T* AddComponent(EntityID e);
 
 		/// <summary>
-		/// Remove Component from Entity, note that adding components to entities moves them physically in memory. 
+		/// Remove Component from Entity, note that removing components from entities moves them physically in memory. 
 		/// </summary>
 		/// <param name="e"> Entity ID </param>
 		template<typename T>
