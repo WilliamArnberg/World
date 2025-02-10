@@ -47,14 +47,14 @@ namespace ecs
 		/// </summary>
 		/// <param name="e"> Entity ID </param>
 		/// <returns>"True if entity was successfully destroyed, if the entity doesn't exist returns false"</returns>
-		bool DestroyEntity(ecs::entity id);
+		bool DestroyEntity(ecs::EntityID id);
 
 		/// <summary>
 		/// Get a Entity View class
 		/// </summary>
 		/// <param name="e"> Entity ID </param>
 		/// <returns>"Entity View Class"</returns>
-		Entity GetEntity(entity id);
+		Entity GetEntity(EntityID id);
 
 		/// <summary>
 		/// Check if a entity has a given component type.
@@ -62,7 +62,7 @@ namespace ecs
 		/// <param name="e"> Entity ID </param>
 		/// <returns>"Returns true if Entity has the component else false"</returns>
 		template<typename T>
-		bool HasComponent(entity e) const;
+		bool HasComponent(EntityID e) const;
 
 		/// <summary>
 		/// Get Component from Entity.
@@ -70,7 +70,7 @@ namespace ecs
 		/// <param name="e"> Entity ID </param>
 		/// <returns>"Returns pointer to component if it exists, else nullptr. If Component is a tag it will return nullptr "</returns>
 		template<typename T>
-		T* GetComponent(entity e);
+		T* GetComponent(EntityID e);
 
 		/// <summary>
 		/// Query for entities
@@ -105,14 +105,14 @@ namespace ecs
 		/// <param name="e"> Entity ID </param>
 		/// <returns>"Returns a pointer to the added component. "</returns>
 		template<typename T>
-		T* AddComponent(entity e);
+		T* AddComponent(EntityID e);
 
 		/// <summary>
 		/// Remove Component from Entity, note that adding components to entities moves them physically in memory. 
 		/// </summary>
 		/// <param name="e"> Entity ID </param>
 		template<typename T>
-		void RemoveComponent(entity e);
+		void RemoveComponent(EntityID e);
 
 		/// <summary>
 		/// Sets a component of type <typeparamref name="T"/> for the specified entity.
@@ -120,7 +120,7 @@ namespace ecs
 		/// <param name="aEntity">The ID of the entity to set the component for.</param>
 		/// <param name="aArgumentList">The arguments required to construct or initialize the component of type <typeparamref name="T"/>.</param>
 		template<typename T, typename...args>
-		void Set(entity aEntity, args&&... aArgumentList);
+		void Set(EntityID aEntity, args&&... aArgumentList);
 		/// <summary>
 		/// Registers a system with the given name and pipeline stage.
 		/// </summary>
@@ -136,10 +136,10 @@ namespace ecs
 		/// <param name="aFunc">A callable (function, lambda, etc.) that will be triggered when the entity’s state changes. This is a forwarding reference for any callable type.</param>
 		/// <param name="aType">The type of observation. Specifies what kind of changes to observe (e.g., add, remove, update).</param>
 		template<typename T, typename Func>
-		void Observe(entity aEntity, Func&& aFunc, ObserverType aType);
+		void Observe(EntityID aEntity, Func&& aFunc, ObserverType aType);
 
 		template<typename T>
-		void EnableComponent(ecs::entity aEntityID, bool isEnabled);
+		void EnableComponent(ecs::EntityID aEntityID, bool isEnabled);
 
 		/// <summary>
 		/// Clears the entire Entity Component System (ECS), removing all entities and components.
@@ -178,7 +178,7 @@ namespace ecs
 		/// <returns>
 		/// A pointer to the <see cref="Archetype"/> associated with the given entity, or `nullptr` if the entity does not have an associated archetype.
 		/// </returns>
-		const Archetype* GetArchetype(entity id) const;
+		const Archetype* GetArchetype(EntityID id) const;
 	private:
 		/// <summary>
 		/// Invalidates a cached query by its associated hash, ensuring that future queries are recalculated.
@@ -195,14 +195,14 @@ namespace ecs
 		/// <returns>
 		/// A unique `entity` ID that can be used to identify an entity in the ECS.
 		/// </returns>
-		ecs::entity GenerateID();
+		ecs::EntityID GenerateID();
 
 		template<typename T>
 		Archetype& AddArchetype(Archetype& aArchetypeSource);
-		void MoveEntityFromToArchetype(Archetype& aArchetype, entity aEntity, Archetype& aNewArchetype);
+		void MoveEntityFromToArchetype(Archetype& aArchetype, EntityID aEntity, Archetype& aNewArchetype);
 
 		template<typename T>
-		void InvokeObserverCallbacks(entity aEntity, ObserverType aType);
+		void InvokeObserverCallbacks(EntityID aEntity, ObserverType aType);
 
 		template<typename T>
 		ComponentTypeInfo RegisterComponent();
@@ -212,7 +212,7 @@ namespace ecs
 		uint64_t myEntityIndexCounter = 1;
 		std::unordered_map<ComponentID, ArchetypeMap> myComponentIndex; // Used to lookup components in archetypes
 		std::unordered_map<Type, Archetype, TypeHash, TypeEqual> myArchetypeIndex; // Find an archetype by its list of component ids
-		std::unordered_map<entity, Record> myEntityIndex;		// Find the archetype for an entity
+		std::unordered_map<EntityID, Record> myEntityIndex;		// Find the archetype for an entity
 		std::unordered_map<CachedQueryHash, std::vector<Archetype*>> myCachedQueries;
 
 		std::unordered_map<ArchetypeID, std::unordered_set<CachedQueryHash>> myArchetypeToQueries;
@@ -225,7 +225,7 @@ namespace ecs
 	};
 
 	template<typename T>
-	void World::InvokeObserverCallbacks(entity aEntity, ObserverType aType)
+	void World::InvokeObserverCallbacks(EntityID aEntity, ObserverType aType)
 	{
 		ObserverRecord& observerRecord = myObserverIndex.at(GetComponentID<T>());
 		ObserverLists& observerLists = observerRecord.at(aEntity);
@@ -278,7 +278,7 @@ namespace ecs
 	}
 
 	template<typename T>
-	inline bool World::HasComponent(entity e) const
+	inline bool World::HasComponent(EntityID e) const
 	{
 		assert(myEntityIndex.contains(e), "I CANT BELIEVE YOU'VE DONE THIS.");
 
@@ -286,7 +286,7 @@ namespace ecs
 	}
 
 	template <typename T>
-	T* World::GetComponent(entity e)
+	T* World::GetComponent(EntityID e)
 	{
 		//std::lock_guard<std::mutex> lock(myMutex); //There are no guarantees for this making it thread-safe since if immediately after this gets unlocked someones adds a component and the data moves the pointer will be invalid no matter what.
 		if (std::is_empty<T>()) return nullptr; //You cannot fetch tags
@@ -426,7 +426,7 @@ namespace ecs
 		{
 			if (!record.second.archetype->IsEmpty())
 			{
-				ecs::entity entity = record.second.archetype->GetEntityList().at(0);
+				ecs::EntityID entity = record.second.archetype->GetEntityList().at(0);
 				return Entity(entity, this);
 			};
 
@@ -438,7 +438,7 @@ namespace ecs
 	}
 
 	template <typename T>
-	T* World::AddComponent(entity e)
+	T* World::AddComponent(EntityID e)
 	{
 
 		Record& record = myEntityIndex.at(e);
@@ -483,7 +483,7 @@ namespace ecs
 	}
 
 	template <typename T>
-	void World::RemoveComponent(entity e)
+	void World::RemoveComponent(EntityID e)
 	{
 		auto& record = myEntityIndex.at(e);
 		if (!record.archetype || !record.archetype->Contains(std::tuple<T>())) return;
@@ -604,7 +604,7 @@ namespace ecs
 	}
 
 	template<typename T, typename ...args>
-	inline void World::Set(entity aEntity, args&&... aArgumentList)
+	inline void World::Set(EntityID aEntity, args&&... aArgumentList)
 	{
 		ArchetypeMap& am = myComponentIndex.at(GetComponentID<T>());
 		const auto index = myEntityIndex.at(aEntity).row;
@@ -619,7 +619,7 @@ namespace ecs
 	}
 
 	template <typename T, typename Func>
-	void World::Observe(entity aEntity, Func&& aFunc, ObserverType aType)
+	void World::Observe(EntityID aEntity, Func&& aFunc, ObserverType aType)
 	{
 		ObserverRecord& observerRecord = myObserverIndex[GetComponentID<T>()];
 		ObserverLists& observerLists = observerRecord[aEntity];
@@ -627,7 +627,7 @@ namespace ecs
 	}
 
 	template<typename T>
-	inline void World::EnableComponent(ecs::entity aEntityID, bool isEnabled)
+	inline void World::EnableComponent(ecs::EntityID aEntityID, bool isEnabled)
 	{
 	}
 

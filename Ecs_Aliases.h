@@ -20,12 +20,12 @@ namespace ecs
 
 	using ArchetypeID = uint64_t;
 	using ComponentID = std::type_index;
-	using entity = uint64_t;
+	using EntityID = uint64_t;
 	using Type = std::vector<ComponentID>; //This vector needs to be sorted 
 	// Used to lookup components in archetypes
 	using ArchetypeMap = std::unordered_map<ArchetypeID, ArchetypeRecord>;
 	using ObserverList = std::vector<std::function<void()>>;
 	using ObserverLists = std::unordered_map <ObserverType, ObserverList>;
-	using ObserverRecord = std::unordered_map<entity, ObserverLists>;
+	using ObserverRecord = std::unordered_map<EntityID, ObserverLists>;
 	using ObserverMap = std::unordered_map<ComponentID, ObserverRecord>;
 }

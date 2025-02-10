@@ -52,7 +52,7 @@ namespace ecs
 		return components.capacity();
 	}
 
-	ecs::entity Archetype::GetEntity(size_t aRow) const
+	ecs::EntityID Archetype::GetEntity(size_t aRow) const
 	{
 		return entities.at(aRow);
 	}
@@ -109,12 +109,12 @@ namespace ecs
 
 
 
-	std::vector<entity>& Archetype::GetEntityList()
+	std::vector<EntityID>& Archetype::GetEntityList()
 	{
 		return entities;
 	}
 
-	void Archetype::AddEntity(ecs::entity aEntity)
+	void Archetype::AddEntity(ecs::EntityID aEntity)
 	{
 		entities.emplace_back(aEntity);
 	}

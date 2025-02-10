@@ -189,7 +189,7 @@ namespace ecs
 		Column*			GetColumn(size_t aColumnIndex);
 		size_t			GetNumComponents() const;
 		size_t			GetComponentCapacity() const;
-		ecs::entity		GetEntity(size_t aRow) const;
+		ecs::EntityID		GetEntity(size_t aRow) const;
 		void			AddComponentIDToTypeSet(ComponentID aComponentID);
 		bool			HasComponent(ComponentID aComponentID) const;
 		size_t			GetNumEntities() const;
@@ -200,9 +200,9 @@ namespace ecs
 		bool			IsEmpty() const;
 		void			Reset();
 		void			AddEmptyComp();
-		std::vector<entity>& GetEntityList();
+		std::vector<EntityID>& GetEntityList();
 		
-		void			AddEntity(ecs::entity aEntity);
+		void			AddEntity(ecs::EntityID aEntity);
 		bool			Contains(const Type& type) const;
 
 		template <typename... Filter>
@@ -215,7 +215,7 @@ namespace ecs
 		Type myType{};						//The order of components in the component list
 		std::unordered_set<ComponentID> typeSet{};
 		std::vector<Column> components{}; //Columns holding the data, use the entity row to access the specific component
-		std::vector<entity> entities{}; //serves as our entity list but the order of entities are also the rows in the component columns
+		std::vector<EntityID> entities{}; //serves as our entity list but the order of entities are also the rows in the component columns
 		std::unordered_map<ComponentID, ArchetypeEdge> edges{};
 		size_t myMaxCount = size_t(0);
 

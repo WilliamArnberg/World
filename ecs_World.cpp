@@ -32,7 +32,7 @@ namespace ecs {
 
 	ecs::Entity ecs::World::Create()
 	{
-		entity entity = GenerateID();
+		EntityID entity = GenerateID();
 
 
 		Entity e(entity, this);
@@ -65,7 +65,7 @@ namespace ecs {
 		return e;
 	}
 
-	bool World::DestroyEntity(ecs::entity id)
+	bool World::DestroyEntity(ecs::EntityID id)
 	{
 		if (!myEntityIndex.contains(id)) return false;
 
@@ -79,11 +79,11 @@ namespace ecs {
 			lastRow = archetype.GetNumEntities() - 1;
 		}
 
-		std::vector<ecs::entity>& entities = archetype.GetEntityList();
+		std::vector<ecs::EntityID>& entities = archetype.GetEntityList();
 
 		if (sourceRow != lastRow)
 		{
-			ecs::entity entityToShuffle = archetype.GetEntity(lastRow);
+			ecs::EntityID entityToShuffle = archetype.GetEntity(lastRow);
 			ecs::Record& shuffleRecord = myEntityIndex.at(entityToShuffle);
 			shuffleRecord.row = sourceRow; //this is the shuffled entities new row.
 
@@ -118,7 +118,7 @@ namespace ecs {
 	}
 
 
-	Entity World::GetEntity(entity id)
+	Entity World::GetEntity(EntityID id)
 	{
 		if (!myEntityIndex.contains(id))
 		{
@@ -127,7 +127,7 @@ namespace ecs {
 		return Entity(id, this);
 	}
 
-	const ecs::Archetype* ecs::World::GetArchetype(entity aEntity) const
+	const ecs::Archetype* ecs::World::GetArchetype(EntityID aEntity) const
 	{
 		return myEntityIndex.at(aEntity).archetype;
 	}
@@ -179,7 +179,7 @@ namespace ecs {
 
 	CleanUp World::ClearOnLoad()
 	{
-		std::vector<std::vector<ecs::entity>> entitiesToRemove;
+		std::vector<std::vector<ecs::EntityID>> entitiesToRemove;
 		CleanUp cleanUp{};
 
 		for (auto e : FilteredQuery<CCollider>(std::tuple<DontDestroyOnLoad>()))
@@ -223,9 +223,9 @@ namespace ecs {
 		mySystems->Quit();
 	}
 
-	ecs::entity World::GenerateID()
+	ecs::EntityID World::GenerateID()
 	{
-		ecs::entity id = myEntityIndexCounter++;
+		ecs::EntityID id = myEntityIndexCounter++;
 		if (id == 0xDEADBABE)
 		{
 			id = myEntityIndexCounter++;
@@ -233,7 +233,7 @@ namespace ecs {
 		return id;
 	}
 
-	void ecs::World::MoveEntityFromToArchetype(Archetype& aArchetype, entity aEntity, Archetype& aNewArchetype)
+	void ecs::World::MoveEntityFromToArchetype(Archetype& aArchetype, EntityID aEntity, Archetype& aNewArchetype)
 	{
 		InvalidateCachedQueryFromMove(&aArchetype,&aNewArchetype);
 		Record& record = myEntityIndex.at(aEntity);
@@ -310,11 +310,11 @@ namespace ecs {
 			lastRow = aArchetype.GetNumEntities() - 1;
 		}
 
-		std::vector<ecs::entity>& entities = aArchetype.GetEntityList();
+		std::vector<ecs::EntityID>& entities = aArchetype.GetEntityList();
 
 		if (sourceRow != lastRow)
 		{
-			ecs::entity entityToShuffle = aArchetype.GetEntity(lastRow);
+			ecs::EntityID entityToShuffle = aArchetype.GetEntity(lastRow);
 			ecs::Record& shuffleRecord = myEntityIndex.at(entityToShuffle);
 			shuffleRecord.row = sourceRow;
 			entities.at(shuffleRecord.row) = entities.at(lastRow);

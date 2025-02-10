@@ -10,7 +10,7 @@ namespace ecs {
 	{
 	public:
 		Entity();
-		Entity(entity aID, World* aWorld);
+		Entity(EntityID aID, World* aWorld);
 		/// <summary>
 		/// Destroys the entity, removing it from the ECS and cleaning up its resources.
 		/// </summary>
@@ -33,7 +33,7 @@ namespace ecs {
 		/// <returns>
 		/// The entity ID.
 		/// </returns>
-		entity GetID() const;
+		EntityID GetID() const;
 
 		/// <summary>
 		/// Checks if the entity has a component of the specified type.
@@ -119,7 +119,7 @@ namespace ecs {
 
 		friend std::ostream& operator<<(std::ostream& os, const Entity& aEntity);
 	private:
-		entity myID; //
+		EntityID myID; //
 		World* myWorld;
 	};
 	template <typename T>

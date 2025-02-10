@@ -7,7 +7,7 @@ namespace ecs
 		myID = 0xDEADBABE;
 		myWorld = nullptr;
 	}
-	ecs::Entity::Entity(entity aID, World* aWorld)
+	ecs::Entity::Entity(EntityID aID, World* aWorld)
 	{
 		myID = aID;
 		myWorld = aWorld;
@@ -26,7 +26,7 @@ namespace ecs
 		myID = 0xDEADBABE;
 		return entityWasRemoved;
 	}
-	entity Entity::GetID() const
+	EntityID Entity::GetID() const
 	{
 		return myID;
 	}
