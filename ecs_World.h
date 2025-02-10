@@ -289,6 +289,7 @@ namespace ecs
 	T* World::GetComponent(EntityID e)
 	{
 		if constexpr (std::is_empty<T>::value) return nullptr;  //You cannot fetch tags
+
 		if (!myEntityIndex.contains(e)) return nullptr;
 		Record& record = myEntityIndex.at(e);
 		if (!record.archetype->HasComponent(GetComponentID<T>())) return nullptr;
@@ -340,9 +341,10 @@ namespace ecs
 				{
 					found++;
 				}
-				if (found < 2)
+				else
 				{
 					break;
+
 				}
 			}
 
