@@ -207,7 +207,7 @@ namespace ecs
 		template<typename T>
 		ComponentTypeInfo RegisterComponent();
 
-		
+
 		std::mutex myMutex;
 		uint64_t myEntityIndexCounter = 1;
 		std::unordered_map<ComponentID, ArchetypeMap> myComponentIndex; // Used to lookup components in archetypes
@@ -288,7 +288,7 @@ namespace ecs
 	template <typename T>
 	T* World::GetComponent(EntityID e)
 	{
-		if constexpr (std::is_empty<T>::value) return nullptr;  //You cannot fetch tags
+		static_assert(!std::is_empty<T>::value); //You cannot fetch tags
 
 		if (!myEntityIndex.contains(e)) return nullptr;
 		Record& record = myEntityIndex.at(e);
@@ -310,7 +310,7 @@ namespace ecs
 	QueryIterator World::Query()
 	{
 		std::lock_guard<std::mutex> lock(myMutex);
-		std::unordered_set<Archetype*> archetypeSet;  
+		std::unordered_set<Archetype*> archetypeSet;
 		Type types = { std::type_index(typeid(Components))... };
 		std::sort(types.begin(), types.end());
 		size_t hash = 0;
@@ -319,7 +319,7 @@ namespace ecs
 			JPH::HashCombine(hash, type.hash_code());
 		}
 
-		
+
 		if (myCachedQueries.contains(hash))
 		{
 			return QueryIterator(this, myCachedQueries.at(hash));
@@ -350,19 +350,19 @@ namespace ecs
 
 			if (found == types.size() && 0 < record.second.archetype->GetNumEntities())
 			{
-				archetypeSet.insert(record.second.archetype);  
+				archetypeSet.insert(record.second.archetype);
 			}
 		}
 
 		if (!archetypeSet.empty())
 		{
 			std::vector<Archetype*> archetypeVector(archetypeSet.begin(), archetypeSet.end());
-			myCachedQueries.emplace(hash, archetypeVector); 
+			myCachedQueries.emplace(hash, archetypeVector);
 			for (auto* archetype : archetypeVector)
 			{
 				myArchetypeToQueries[archetype->GetID()].insert(hash);
 			}
-			return QueryIterator(this, archetypeVector);  
+			return QueryIterator(this, archetypeVector);
 		}
 
 		return QueryIterator();
@@ -441,12 +441,9 @@ namespace ecs
 	template <typename T>
 	T* World::AddComponent(EntityID e)
 	{
-
 		Record& record = myEntityIndex.at(e);
-
-		T* component = GetComponent<T>(e);
-		if (component) return component;
-
+		
+		assert(!HasComponent<T>(e));
 		ComponentID componentID = GetComponentID<T>();
 		Archetype& archetype = *record.archetype;
 		std::lock_guard<std::mutex> lock(myMutex);
@@ -457,13 +454,11 @@ namespace ecs
 		size_t maxCount = nextArchetype.GetMaxCount();
 		MoveEntityFromToArchetype(archetype, e, nextArchetype);
 
-		if (!nextArchetype.HasComponent(GetComponentID<DontDestroyOnLoad>()) && !myClearOnLoadIndex.contains(nextArchetypeID))
+
+		if(std::is_empty<T>::value)
 		{
-			myClearOnLoadArchetypeList.emplace_back(&nextArchetype.GetType());
-			size_t index = myClearOnLoadArchetypeList.size();
-			myClearOnLoadIndex.emplace(nextArchetypeID, index);
+			return nullptr;
 		}
-		if (std::is_empty<T>()) return nullptr;
 
 		if (maxCount != nextArchetype.GetMaxCount()) //Checking this here because nextArchetype maxCount might change inside MoveEntityFromToArchetype
 		{
@@ -589,7 +584,7 @@ namespace ecs
 					newArchetype.GetColumn(targetColumnIndex)->Reset(new std::byte[elementSize * maxCount]);
 					newArchetype.GetColumn(targetColumnIndex)->SetCapacity(maxCount * elementSize);
 				}
-				InvalidateCachedQueryFromMove(sourceArchetype,&newArchetype);
+				InvalidateCachedQueryFromMove(sourceArchetype, &newArchetype);
 				ArchetypeEdge& edge = record.archetype->GetEdge(componentID);
 				edge.removeArchetypes = &myArchetypeIndex[newType];
 
@@ -654,8 +649,8 @@ namespace ecs
 		myArchetypeIndex[newType] = Archetype();
 		myArchetypeIndex[newType].SetID(myArchetypeIndex.size());
 		myArchetypeIndex[newType].SetType(newType);
-
 		auto& newArchetype = myArchetypeIndex[newType];
+		ArchetypeID newArchetypeID = newArchetype.GetID();
 		size_t numComponents{ 0 };
 		bool isTag = false;
 		int columnIndex = 0;
@@ -671,14 +666,14 @@ namespace ecs
 			}
 			if (isTag || (newType[i] == typeid(T) && std::is_empty<T>()))
 			{
-				am[newArchetype.GetID()].columnIndex = -1;
-				am[newArchetype.GetID()].archetype = &myArchetypeIndex[newType];
+				am[newArchetypeID].columnIndex = -1;
+				am[newArchetypeID].archetype = &myArchetypeIndex[newType];
 				isTag = false;
 			}
 			else
 			{
-				am[newArchetype.GetID()].columnIndex = columnIndex;
-				am[newArchetype.GetID()].archetype = &myArchetypeIndex[newType];
+				am[newArchetypeID].columnIndex = columnIndex;
+				am[newArchetypeID].archetype = &myArchetypeIndex[newType];
 				numComponents++;
 				columnIndex++;
 			}
@@ -690,10 +685,7 @@ namespace ecs
 		newArchetype.ReserveComponentsSize(numComponents);
 		newArchetype.SetMaxCount(2);
 		newArchetype.ResizeComponents(numComponents);
-		/*for (int i = 0; i < numComponents; i++)
-		{
-			newArchetype.components.emplace_back();
-		}*/
+
 
 
 		if (0 < aArchetypeSource.GetType().size())
@@ -703,7 +695,7 @@ namespace ecs
 				auto& archetypeMap = myComponentIndex.at(aArchetypeSource.GetType()[i]);
 
 				int sourceColumnIndex = archetypeMap.at(aArchetypeSource.GetID()).columnIndex;
-				int targetColumnIndex = archetypeMap.at(newArchetype.GetID()).columnIndex;
+				int targetColumnIndex = archetypeMap.at(newArchetypeID).columnIndex;
 				if (sourceColumnIndex == -1 || targetColumnIndex == -1) continue; //Its a tag.
 
 				newArchetype.GetColumn(targetColumnIndex)->AssignTypeInfo(aArchetypeSource.GetColumn(sourceColumnIndex)->GetTypeInfo());
@@ -720,7 +712,7 @@ namespace ecs
 		if (!std::is_empty<T>())
 		{
 			ArchetypeMap& newArchetypeMap = myComponentIndex.at(componentID);
-			int targetColumnIndex = newArchetypeMap.at(newArchetype.GetID()).columnIndex;
+			int targetColumnIndex = newArchetypeMap.at(newArchetypeID).columnIndex;
 
 			Column* col = newArchetype.GetColumn(targetColumnIndex);
 			col->AssignTypeInfo(RegisterComponent<T>());
@@ -737,6 +729,16 @@ namespace ecs
 
 		newEdge.removeArchetypes = &aArchetypeSource;
 		newEdge.addArchetypes = nullptr;
+
+
+
+		if (!newArchetype.HasComponent(GetComponentID<DontDestroyOnLoad>()) && !myClearOnLoadIndex.contains(newArchetypeID))
+		{
+			myClearOnLoadArchetypeList.emplace_back(&newArchetype.GetType());
+			size_t index = myClearOnLoadArchetypeList.size();
+			myClearOnLoadIndex.emplace(newArchetypeID, index);
+		}
+
 
 		return myArchetypeIndex[newType];
 	}
