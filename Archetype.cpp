@@ -1,7 +1,10 @@
 #include "Archetype.h"
 namespace ecs
 {
-
+	size_t Archetype::GetLastRow() const
+	{
+		return entities.size() - 1;
+	}
 	ecs::ArchetypeID ecs::Archetype::GetID() const
 	{
 		return myID;
@@ -121,7 +124,7 @@ namespace ecs
 
 
 
-	
+
 
 	bool Archetype::Contains(const Type& type) const
 	{
@@ -147,6 +150,27 @@ namespace ecs
 		}
 
 		return -1;
+	}
+
+	void Archetype::ShuffleEntity(size_t aFromRow, size_t aToRow)
+	{
+		for (size_t i = 0; i < GetNumComponents(); i++)
+		{
+			auto& typeData = GetColumn(i)->GetTypeInfo();
+
+			if (typeData.isTrivial)
+			{
+				std::memcpy(GetColumn(i)->GetComponent(aToRow), GetColumn(i)->GetComponent(aFromRow), GetColumn(i)->GetElementSize());
+			}
+			else if (typeData.move)
+			{
+				typeData.move(GetColumn(i)->GetComponent(aToRow), GetColumn(i)->GetComponent(aFromRow));
+			}
+			else if (typeData.copy)
+			{
+				typeData.copy(GetColumn(i)->GetComponent(aToRow), GetColumn(i)->GetComponent(aFromRow));
+			}
+		}
 	}
 
 	ArchetypeEdge& Archetype::GetEdge(ComponentID aID)
@@ -188,17 +212,29 @@ namespace ecs
 
 	void ecs::Column::Reset(std::byte* aBuffer)
 	{
-		
+
 		myBuffer.reset(aBuffer);
 	}
 
-	void ecs::Column::Resize(size_t aMul)
+	void ecs::Column::Resize(size_t aNewSize)
 	{
-		size_t newSize = GetCapacity() * aMul;
-		std::unique_ptr<std::byte[]> newData(new std::byte[newSize]);
+		std::unique_ptr<std::byte[]> newData(new std::byte[aNewSize]);
+		if (myTypeInfo.isTrivial)
+		{
+			std::memcpy(newData.get(), myBuffer.get(), GetCapacity());
+		}
+		else
+		{
+			for(size_t index = 0; index < myCapacity / myTypeInfo.size; index++ )
+			{
+				void* sourceComp = GetComponent(index);
+				void* targetComp = newData.get() + (index * GetElementSize());
+				MoveOrCopyDataFromTo(sourceComp,targetComp);
+			
+			}
+		}
 
-		std::memcpy(newData.get(), myBuffer.get(), GetCapacity());
-		SetCapacity(newSize);
+		SetCapacity(aNewSize);
 		myBuffer = std::move(newData);
 	}
 
@@ -227,6 +263,22 @@ namespace ecs
 	{
 		assert(aIndex <= (GetCapacity()), "Trying to access element outside of buffer");
 		return myBuffer.get() + (aIndex * GetElementSize());;
+	}
+
+	void Column::MoveOrCopyDataFromTo(void* aFrom, void* aTo)
+	{
+		if (myTypeInfo.isTrivial)
+		{
+			std::memcpy(aTo, aFrom, myTypeInfo.size);
+		}
+		else if (myTypeInfo.move)
+		{
+			myTypeInfo.move(aTo, aFrom);
+		}
+		/*else if (myTypeInfo.copy)
+		{
+			myTypeInfo.copy(aTo, aFrom);
+		}*/
 	}
 
 }

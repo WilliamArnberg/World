@@ -4,7 +4,7 @@ namespace ecs
 {
 	Entity::Entity()
 	{
-		myID = 0xDEADBABE;
+		myID = 0;
 		myWorld = nullptr;
 	}
 	ecs::Entity::Entity(EntityID aID, World* aWorld)
@@ -15,7 +15,7 @@ namespace ecs
 
 	bool Entity::IsNull()
 	{
-		if(myID == 0xDEADBABE) return true;
+		if(myID == 0) return true;
 
 		return false;
 	}
@@ -23,7 +23,7 @@ namespace ecs
 	{
 		
 		bool entityWasRemoved = myWorld->DestroyEntity(myID);
-		myID = 0xDEADBABE;
+		myID = 0;
 		return entityWasRemoved;
 	}
 	EntityID Entity::GetID() const

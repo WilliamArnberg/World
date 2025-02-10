@@ -4,10 +4,11 @@
 #include <functional>
 #include <typeindex>
 
-#define ECS_ENTITY_NULL 0xDEADBABE
+static constexpr uint64_t ECS_ENTITY_NULL = 0;
 
 namespace ecs
 {
+	
 	struct ArchetypeRecord;
 	class Archetype;
 	struct ArchetypeEdge;

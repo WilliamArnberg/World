@@ -18,7 +18,7 @@
 #include "Archetype.h"
 #include "Ecs_Aliases.h"
 #include "CleanUpContainer.h"
-
+#define NOMINMAX
 namespace ecs
 {
 	class Entity;
@@ -27,7 +27,8 @@ namespace ecs
 	template<typename T>
 	inline ComponentID GetComponentID();
 	using CachedQueryHash = size_t;
-#undef max
+	
+
 	class World
 	{
 	public:
@@ -156,7 +157,7 @@ namespace ecs
 		/// <returns>
 		/// A struct containing the necessary objects for other systems to perform cleanup tasks.
 		/// </returns>
-		CleanUp ClearOnLoad();
+		CleanUp PrepareCleanupForLevelLoad();
 
 		/// <summary>
 		/// Progresses all systems in the ECS, typically used in a game loop or during time-based updates.
@@ -197,19 +198,26 @@ namespace ecs
 		/// </returns>
 		ecs::EntityID GenerateID();
 
+		/// <summary>
+		/// Derives a new archetype from the source archetype.
+		/// </summary>
+		/// <returns>
+		/// A reference to the new archetype
+		/// </returns>
 		template<typename T>
-		Archetype& AddArchetype(Archetype& aArchetypeSource);
-		void MoveEntityFromToArchetype(Archetype& aArchetype, EntityID aEntity, Archetype& aNewArchetype);
+		Archetype& AddArchetypeFromSource(Archetype& aArchetypeSource);
 
+		void MoveEntityFromToArchetype(Archetype& aArchetype, EntityID aEntity, Archetype& aNewArchetype);
+		
 		template<typename T>
 		void InvokeObserverCallbacks(EntityID aEntity, ObserverType aType);
 
 		template<typename T>
 		ComponentTypeInfo RegisterComponent();
-
+		
 
 		std::mutex myMutex;
-		uint64_t myEntityIndexCounter = 1;
+		ecs::EntityID myNextEntity = 1;
 		std::unordered_map<ComponentID, ArchetypeMap> myComponentIndex; // Used to lookup components in archetypes
 		std::unordered_map<Type, Archetype, TypeHash, TypeEqual> myArchetypeIndex; // Find an archetype by its list of component ids
 		std::unordered_map<EntityID, Record> myEntityIndex;		// Find the archetype for an entity
@@ -447,7 +455,7 @@ namespace ecs
 		ComponentID componentID = GetComponentID<T>();
 		Archetype& archetype = *record.archetype;
 		std::lock_guard<std::mutex> lock(myMutex);
-		Archetype& nextArchetype = AddArchetype<T>(archetype);
+		Archetype& nextArchetype = AddArchetypeFromSource<T>(archetype);
 		ArchetypeID nextArchetypeID = nextArchetype.GetID();
 
 		assert(archetype.GetID() != nextArchetypeID, "Somehow moving to same archetype");
@@ -464,10 +472,10 @@ namespace ecs
 		{
 			ArchetypeMap& archetypeMap = myComponentIndex.at(componentID);
 			size_t columnID = archetypeMap.at(nextArchetypeID).columnIndex;
-			nextArchetype.GetColumn(columnID)->Resize(2);
+			nextArchetype.GetColumn(columnID)->Resize(nextArchetype.GetColumn(columnID)->GetCapacity() * 2);
 		}
-		ArchetypeMap& am = myComponentIndex.at(componentID);
-		ArchetypeRecord& archetypeRecord = am.at(nextArchetypeID);
+		ArchetypeMap& archetypeMap = myComponentIndex.at(componentID);
+		ArchetypeRecord& archetypeRecord = archetypeMap.at(nextArchetypeID);
 
 		assert(nextArchetype.GetColumn(archetypeRecord.columnIndex)->GetTypeInfo().typeID == typeid(T), "This component is not the right type, imminent pagefault.");
 
@@ -547,16 +555,6 @@ namespace ecs
 
 				}
 
-
-				/*for (int columnIndex = 0; columnIndex < newType.size(); ++columnIndex)
-				{
-					ComponentID type = newType[columnIndex];
-					newArchetype.AddComponentIDToTypeSet(type);
-					ArchetypeMap& am = myComponentIndex[type];
-					am[newArchetype.GetID()].column = columnIndex;
-					am[newArchetype.GetID()].archetype = &myArchetypeIndex[newType];
-				}*/
-
 				//Copying over component structure from old archetype to new archetype, no data is copied at this point.
 				//Only copying meta data for component structure 
 				size_t maxCount = 2;
@@ -627,11 +625,8 @@ namespace ecs
 	{
 	}
 
-
-
-
 	template <typename T>
-	Archetype& World::AddArchetype(Archetype& aArchetypeSource)
+	Archetype& World::AddArchetypeFromSource(Archetype& aArchetypeSource)
 	{
 		ComponentID componentID = GetComponentID<T>();
 

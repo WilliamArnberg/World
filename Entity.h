@@ -119,7 +119,7 @@ namespace ecs {
 
 		friend std::ostream& operator<<(std::ostream& os, const Entity& aEntity);
 	private:
-		EntityID myID; //
+		EntityID myID {0}; //
 		World* myWorld;
 	};
 	template <typename T>

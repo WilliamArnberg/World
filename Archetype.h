@@ -30,6 +30,7 @@ namespace ecs
 			return lhs == rhs;
 		}
 	};
+
 	struct ArchetypeRecord
 	{
 		Archetype* archetype;
@@ -153,7 +154,7 @@ namespace ecs
 		size_t GetCapacity() const;
 		void SetCapacity(size_t aCapacity);
 		void Reset(std::byte* aBuffer);
-		void Resize(size_t aMul);
+		void Resize(size_t aNewSize);
 		void AssignTypeInfo(const ComponentTypeInfo& aTypeInfo);
 		void ChangeMemoryUsed(int aNumElements);
 		const ComponentTypeInfo& GetTypeInfo() const;
@@ -164,6 +165,7 @@ namespace ecs
 			assert(aIndex <= (myCapacity), "Trying to access element outside of buffer");
 			return myBuffer.get() + (aIndex * GetElementSize());
 		}
+		void MoveOrCopyDataFromTo(void* aFrom,void* aTo);
 
 	private:
 		std::unique_ptr<std::byte[]> myBuffer; //Component storage
@@ -178,6 +180,7 @@ namespace ecs
 	public:
 		Archetype() = default;
 		~Archetype() = default;
+		size_t			GetLastRow() const;
 		ArchetypeID		GetID() const;
 		void			SetID(ArchetypeID aID);
 		const Type&		GetType() const;
@@ -209,6 +212,8 @@ namespace ecs
 		bool			Contains(std::tuple<Filter...> filters) const;
 		ArchetypeEdge& AddEdge(ComponentID aComponentID);
 		int			FindColumnIndex(ComponentID aComponentID) const;
+		void			ShuffleEntity(size_t aFromRow, size_t aToRow);
+		
 	private:
 
 		ArchetypeID myID{ 0 };

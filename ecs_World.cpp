@@ -19,6 +19,11 @@ namespace ecs {
 	World::World() : mySystems(std::make_unique<SystemManager>())
 	{
 
+		constexpr Type emptyType{};
+		myArchetypeIndex[emptyType];
+		myArchetypeIndex[emptyType].SetID(myArchetypeIndex.size());
+		myArchetypeIndex[emptyType].SetType(emptyType);
+
 	}
 
 	World::~World()
@@ -33,34 +38,16 @@ namespace ecs {
 	ecs::Entity ecs::World::Create()
 	{
 		EntityID id = GenerateID();
-
-
 		Entity e(id, this);
-		Type emptyType;
-		auto it = myArchetypeIndex.find(emptyType);
-		Archetype* archetype;
+		constexpr Type emptyType{};
+		Archetype& emptyArchetype = myArchetypeIndex.at(emptyType);
+		emptyArchetype.AddEntity(id);
 
-		if (it == myArchetypeIndex.end())
-		{
-			myArchetypeIndex[emptyType];
-			myArchetypeIndex[emptyType].SetID(myArchetypeIndex.size());
-			myArchetypeIndex[emptyType].SetType(emptyType);
-			myArchetypeIndex[emptyType].AddEntity(id);
+		//Record record;
+		//record.archetype = &emptyArchetype;
+		//record.row = emptyArchetype.GetLastRow();
 
-			archetype = &myArchetypeIndex[emptyType];
-		}
-		else
-		{
-			archetype = &it->second;
-			archetype->AddEntity(id);
-		}
-
-		//size_t newRow = archetype->components.empty() ? 0 : archetype->components[0].count;
-		Record record;
-		record.archetype = archetype;
-		record.row = archetype->GetNumEntities() - 1;
-
-		myEntityIndex.emplace(id, record);
+		myEntityIndex.emplace(id, Record{&emptyArchetype,emptyArchetype.GetLastRow()});
 
 		return e;
 	}
@@ -76,7 +63,7 @@ namespace ecs {
 
 		if (!archetype.IsEmpty())
 		{
-			lastRow = archetype.GetNumEntities() - 1;
+			lastRow = archetype.GetLastRow();
 		}
 
 		std::vector<ecs::EntityID>& entities = archetype.GetEntityList();
@@ -84,31 +71,11 @@ namespace ecs {
 		if (sourceRow != lastRow)
 		{
 			ecs::EntityID entityToShuffle = archetype.GetEntity(lastRow);
+
 			ecs::Record& shuffleRecord = myEntityIndex.at(entityToShuffle);
 			shuffleRecord.row = sourceRow; //this is the shuffled entities new row.
-
 			entities.at(shuffleRecord.row) = entities.at(lastRow);
-
-			for (size_t i = 0; i < archetype.GetNumComponents(); i++)
-			{
-				void* sourceComponent = archetype.GetColumn(i)->GetComponent(lastRow);
-
-				auto& typeData = archetype.GetColumn(i)->GetTypeInfo();
-
-				void* targetComponent = archetype.GetColumn(i)->GetComponent(sourceRow);
-				if (typeData.isTrivial)
-				{
-					std::memcpy(targetComponent, sourceComponent, archetype.GetColumn(i)->GetElementSize());
-				}
-				else if (typeData.move)
-				{
-					typeData.move(targetComponent, sourceComponent);
-				}
-				else if (typeData.copy)
-				{
-					typeData.copy(targetComponent, sourceComponent);
-				}
-			}
+			archetype.ShuffleEntity(lastRow, sourceRow);
 		}
 		InvalidateCachedQueryFromMove(&archetype, nullptr);
 
@@ -122,7 +89,7 @@ namespace ecs {
 	{
 		if (!myEntityIndex.contains(id))
 		{
-			return Entity(0xDEADBABE, this);
+			return Entity(ECS_ENTITY_NULL, this);
 		}
 		return Entity(id, this);
 	}
@@ -173,8 +140,6 @@ namespace ecs {
 		myEntityIndex.clear();
 		myArchetypeIndex.clear();
 		myComponentIndex.clear();
-		//myTagToEntityIndex.clear();
-
 	}
 
 	CleanUp World::PrepareCleanupForLevelLoad()
@@ -225,21 +190,18 @@ namespace ecs {
 
 	ecs::EntityID World::GenerateID()
 	{
-		ecs::EntityID id = myEntityIndexCounter++;
-		if (id == 0xDEADBABE)
-		{
-			id = myEntityIndexCounter++;
-		}
+		ecs::EntityID id = myNextEntity++;
+
 		return id;
 	}
 
 	void ecs::World::MoveEntityFromToArchetype(Archetype& aArchetype, EntityID aEntity, Archetype& aNewArchetype)
 	{
-		InvalidateCachedQueryFromMove(&aArchetype,&aNewArchetype);
+		InvalidateCachedQueryFromMove(&aArchetype, &aNewArchetype);
 		Record& record = myEntityIndex.at(aEntity);
 		assert(record.archetype, "Archetype was null");
 		aNewArchetype.AddEntity(aEntity); // the archetype count increases by 1
-		size_t aNewRow = aNewArchetype.GetNumEntities() - 1;
+		size_t aNewRow = aNewArchetype.GetLastRow();
 
 		size_t sourceRow = record.row;
 		//if moving from one archetype to another and the new archetype dont have enough memory double the size of the new allocation. 
@@ -255,12 +217,9 @@ namespace ecs {
 
 				size_t targetColumnIndex = archetypeMap.at(aNewArchetype.GetID()).columnIndex;
 				if (targetColumnIndex == -1) continue; //Its a tag;
-				//assert(aNewArchetype.type[targetColumnIndex] == sourceID); //
-				aNewArchetype.GetColumn(targetColumnIndex)->Resize(2);
+				aNewArchetype.GetColumn(targetColumnIndex)->Resize(aNewArchetype.GetColumn(targetColumnIndex)->GetCapacity() * 2);
 			}
 			aNewArchetype.SetMaxCount(aNewArchetype.GetMaxCount() * 2);
-
-
 		};
 
 		for (size_t i = 0; i < aArchetype.GetNumTypes(); i++)
@@ -272,33 +231,17 @@ namespace ecs {
 			int targetColumnIndex = -1;
 			archetypeMap.contains(aNewArchetype.GetID()) ? targetColumnIndex = archetypeMap.at(aNewArchetype.GetID()).columnIndex : targetColumnIndex; //If we are removing a component and the new archetype doesnt have the component we set it to -1 and just continue
 
-
-
 			if (sourceColumnIndex == -1 || targetColumnIndex == -1) continue; //Its a tag or the component shouldn't exist
-			size_t elementSize = aArchetype.GetColumn(sourceColumnIndex)->GetElementSize();
 
 			assert(aEntity == aArchetype.GetEntity(sourceRow) && aEntity == aNewArchetype.GetEntity(aNewRow), "Copying data to wrong entity.");
-			//assert(aNewArchetype.GetComponentIDFromTypeList(targetColumnIndex) == aArchetype.GetComponentIDFromTypeList(sourceColumnIndex)); //Fixed: This doesn't work since adding tags typelists no longer are guaranteed to align.
 			assert(aNewArchetype.GetColumn(targetColumnIndex)->GetElementSize() == aArchetype.GetColumn(sourceColumnIndex)->GetElementSize());
 
 			aArchetype.GetColumn(sourceColumnIndex)->ChangeMemoryUsed(-1);
 			aNewArchetype.GetColumn(targetColumnIndex)->ChangeMemoryUsed(1);
 
 			void* sourceComponent = aArchetype.GetColumn(sourceColumnIndex)->GetComponent(sourceRow);
-			auto typeData = aArchetype.GetColumn(sourceColumnIndex)->GetTypeInfo();
 			void* targetComponent = aNewArchetype.GetColumn(targetColumnIndex)->GetComponent(aNewRow);
-			if (typeData.isTrivial)
-			{
-				std::memcpy(targetComponent, sourceComponent, elementSize);
-			}
-			else if (typeData.move)
-			{
-				typeData.move(targetComponent, sourceComponent);
-			}
-			else if (typeData.copy)
-			{
-				typeData.copy(targetComponent, sourceComponent);
-			}
+			aNewArchetype.GetColumn(targetColumnIndex)->MoveOrCopyDataFromTo(sourceComponent, targetComponent);
 		}
 
 		record.archetype = &aNewArchetype;
@@ -307,7 +250,7 @@ namespace ecs {
 		size_t lastRow = 0;
 		if (!aArchetype.IsEmpty())
 		{
-			lastRow = aArchetype.GetNumEntities() - 1;
+			lastRow = aArchetype.GetLastRow();
 		}
 
 		std::vector<ecs::EntityID>& entities = aArchetype.GetEntityList();
@@ -318,25 +261,7 @@ namespace ecs {
 			ecs::Record& shuffleRecord = myEntityIndex.at(entityToShuffle);
 			shuffleRecord.row = sourceRow;
 			entities.at(shuffleRecord.row) = entities.at(lastRow);
-
-			for (size_t i = 0; i < aArchetype.GetNumComponents(); i++)
-			{
-				auto typeData = aArchetype.GetColumn(i)->GetTypeInfo();
-
-				if (typeData.isTrivial)
-				{
-					std::memcpy(aArchetype.GetColumn(i)->GetComponent(sourceRow), aArchetype.GetColumn(i)->GetComponent(lastRow), aArchetype.GetColumn(i)->GetElementSize());
-				}
-				else if (typeData.move)
-				{
-					typeData.move(aArchetype.GetColumn(i)->GetComponent(sourceRow), aArchetype.GetColumn(i)->GetComponent(lastRow));
-				}
-				else if (typeData.copy)
-				{
-					typeData.copy(aArchetype.GetColumn(i)->GetComponent(sourceRow), aArchetype.GetColumn(i)->GetComponent(lastRow));
-				}
-			}
-
+			aArchetype.ShuffleEntity(lastRow, sourceRow);
 		}
 
 		entities.pop_back(); // the moved entity is guaranteed to be at the end at this point so just pop it, and decrease rowcount of the archetype.
