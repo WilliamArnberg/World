@@ -288,8 +288,7 @@ namespace ecs
 	template <typename T>
 	T* World::GetComponent(EntityID e)
 	{
-		//std::lock_guard<std::mutex> lock(myMutex); //There are no guarantees for this making it thread-safe since if immediately after this gets unlocked someones adds a component and the data moves the pointer will be invalid no matter what.
-		if (std::is_empty<T>()) return nullptr; //You cannot fetch tags
+		if constexpr (std::is_empty<T>::value) return nullptr;  //You cannot fetch tags
 		if (!myEntityIndex.contains(e)) return nullptr;
 		Record& record = myEntityIndex.at(e);
 		if (!record.archetype->HasComponent(GetComponentID<T>())) return nullptr;
