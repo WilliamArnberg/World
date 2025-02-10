@@ -32,10 +32,10 @@ namespace ecs {
 
 	ecs::Entity ecs::World::Create()
 	{
-		EntityID entity = GenerateID();
+		EntityID id = GenerateID();
 
 
-		Entity e(entity, this);
+		Entity e(id, this);
 		Type emptyType;
 		auto it = myArchetypeIndex.find(emptyType);
 		Archetype* archetype;
@@ -45,14 +45,14 @@ namespace ecs {
 			myArchetypeIndex[emptyType];
 			myArchetypeIndex[emptyType].SetID(myArchetypeIndex.size());
 			myArchetypeIndex[emptyType].SetType(emptyType);
-			myArchetypeIndex[emptyType].AddEntity(entity);
+			myArchetypeIndex[emptyType].AddEntity(id);
 
 			archetype = &myArchetypeIndex[emptyType];
 		}
 		else
 		{
 			archetype = &it->second;
-			archetype->AddEntity(entity);
+			archetype->AddEntity(id);
 		}
 
 		//size_t newRow = archetype->components.empty() ? 0 : archetype->components[0].count;
@@ -60,7 +60,7 @@ namespace ecs {
 		record.archetype = archetype;
 		record.row = archetype->GetNumEntities() - 1;
 
-		myEntityIndex.emplace(entity, record);
+		myEntityIndex.emplace(id, record);
 
 		return e;
 	}

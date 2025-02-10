@@ -189,7 +189,7 @@ namespace ecs
 		Column*			GetColumn(size_t aColumnIndex);
 		size_t			GetNumComponents() const;
 		size_t			GetComponentCapacity() const;
-		ecs::EntityID		GetEntity(size_t aRow) const;
+		ecs::EntityID	GetEntity(size_t aRow) const;
 		void			AddComponentIDToTypeSet(ComponentID aComponentID);
 		bool			HasComponent(ComponentID aComponentID) const;
 		size_t			GetNumEntities() const;

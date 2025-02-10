@@ -20,33 +20,21 @@ namespace ecs {
 	}
 
 	ecs::QueryIterator::QueryIterator(World* aWorld, std::vector<Archetype*> aArchetypeList)
-		: myArchetypes(std::move(aArchetypeList)), myArchetypeIndex(0), myEntityIndex(0), myWorld(aWorld), mySize(0)
+		: myArchetypes(std::move(aArchetypeList)), myArchetypeIndex(0), myEntityIndex(0), myWorld(aWorld)
 	{
-		for (const auto& a : myArchetypes)
-		{
-			mySize += a->GetNumEntities();
-		}
+		
 	}
 
 	ecs::QueryIterator::QueryIterator(std::vector<Archetype*> aArchetypeList, size_t aArchetypeIndex, size_t aEntityIndex, World* aWorld)
-		: myArchetypes(std::move(aArchetypeList)), myArchetypeIndex(aArchetypeIndex), myEntityIndex(aEntityIndex), myWorld(aWorld), mySize(0)
+		: myArchetypes(std::move(aArchetypeList)), myArchetypeIndex(aArchetypeIndex), myEntityIndex(aEntityIndex), myWorld(aWorld)
 	{
-		for (const auto& a : myArchetypes)
-		{
-			mySize += a->GetNumEntities();
-		}
+		
 	}
 
 	QueryIterator::QueryIterator(QueryIterator& aIterator) 
-		: myArchetypeIndex(aIterator.myArchetypeIndex), myEntityIndex(aIterator.myEntityIndex), myWorld(aIterator.myWorld), mySize(0)
+		: myArchetypeIndex(aIterator.myArchetypeIndex), myEntityIndex(aIterator.myEntityIndex), myWorld(aIterator.myWorld)
 	{
 			
-		{
-			for (const auto& a : myArchetypes)
-			{
-				mySize += a->GetNumEntities();
-			}
-		}
 	}
 
 	ecs::QueryIterator ecs::QueryIterator::operator++(int)
@@ -71,10 +59,7 @@ namespace ecs {
 		return myEntityIndex;
 	}
 
-	size_t QueryIterator::GetElementSize() const
-	{
-		return mySize;
-	}
+	
 
 	ecs::QueryIterator& ecs::QueryIterator::operator++()
 	{

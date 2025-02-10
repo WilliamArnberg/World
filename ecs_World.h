@@ -462,7 +462,7 @@ namespace ecs
 			size_t index = myClearOnLoadArchetypeList.size();
 			myClearOnLoadIndex.emplace(nextArchetypeID, index);
 		}
-		if (std::is_empty<T>())return nullptr;
+		if (std::is_empty<T>()) return nullptr;
 
 		if (maxCount != nextArchetype.GetMaxCount()) //Checking this here because nextArchetype maxCount might change inside MoveEntityFromToArchetype
 		{
