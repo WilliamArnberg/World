@@ -15,6 +15,8 @@ namespace ecs {
 		OnUpdate,	//Gameplay and systems
 		OnValidate, //Validate what happened in the previous update for instance collision resolving
 		OnStart,	//This runs once when the game starts.
+		OnRenderLoad,
+		PostRenderLoad,
 		PreRender,	//Begin Frame
 		Render,		//Renders the scene
 		UIRender,
@@ -46,7 +48,6 @@ namespace ecs {
 		void RemoveSystem(const char* aName, Pipeline aPipeline);
 		void Quit();
 	private:
-		
 		void PostRender();
 		void DebugOnStart();
 		void OnStart();
@@ -56,6 +57,8 @@ namespace ecs {
 		void OnUpdate();
 		void OnValidate();
 		void PreRender();
+		void OnRenderLoad();
+		void PostRenderLoad();
 		void Render();
 		void UIRender();
 		void OnQuit();

@@ -26,6 +26,7 @@ bool ecs::SystemManager::Progress()
 	OnUpdate();
 	OnValidate();
 	PreRender();
+	
 	Render();
 	UIRender();
 #ifndef _RETAIL
@@ -171,6 +172,22 @@ void ecs::SystemManager::OnValidate()
 void ecs::SystemManager::PreRender()
 {
 	for (auto& system : myPipelines[Pipeline::PreRender].second)
+	{
+		system();
+	}
+}
+
+void ecs::SystemManager::OnRenderLoad()
+{
+	for (auto& system : myPipelines[Pipeline::OnRenderLoad].second)
+	{
+		system();
+	}
+}
+
+void ecs::SystemManager::PostRenderLoad()
+{
+	for (auto& system : myPipelines[Pipeline::PostRenderLoad].second)
 	{
 		system();
 	}

@@ -19,7 +19,7 @@ namespace ecs {
 	World::World() : mySystems(std::make_unique<SystemManager>())
 	{
 
-		constexpr Type emptyType{};
+		Type emptyType{};
 		myArchetypeIndex[emptyType];
 		myArchetypeIndex[emptyType].SetID(myArchetypeIndex.size());
 		myArchetypeIndex[emptyType].SetType(emptyType);
@@ -39,7 +39,7 @@ namespace ecs {
 	{
 		EntityID id = GenerateID();
 		Entity e(id, this);
-		constexpr Type emptyType{};
+		Type emptyType{};
 		Archetype& emptyArchetype = myArchetypeIndex.at(emptyType);
 		emptyArchetype.AddEntity(id);
 
@@ -150,6 +150,8 @@ namespace ecs {
 		for (auto e : FilteredQuery<CCollider>(std::tuple<DontDestroyOnLoad>()))
 		{
 			auto col = e.GetComponent<CCollider>();
+			//Parent* parent = e.GetComponent<Parent>(); 
+			
 			cleanUp.colliderEntitiesToRemove.emplace_back(col->myBodyID, e.GetID());
 
 		}

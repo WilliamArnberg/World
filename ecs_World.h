@@ -27,7 +27,7 @@ namespace ecs
 	template<typename T>
 	inline ComponentID GetComponentID();
 	using CachedQueryHash = size_t;
-	
+
 
 	class World
 	{
@@ -208,13 +208,13 @@ namespace ecs
 		Archetype& AddArchetypeFromSource(Archetype& aArchetypeSource);
 
 		void MoveEntityFromToArchetype(Archetype& aArchetype, EntityID aEntity, Archetype& aNewArchetype);
-		
+
 		template<typename T>
 		void InvokeObserverCallbacks(EntityID aEntity, ObserverType aType);
 
 		template<typename T>
 		ComponentTypeInfo RegisterComponent();
-		
+
 
 		std::mutex myMutex;
 		ecs::EntityID myNextEntity = 1;
@@ -318,7 +318,6 @@ namespace ecs
 	QueryIterator World::Query()
 	{
 		std::lock_guard<std::mutex> lock(myMutex);
-		std::unordered_set<Archetype*> archetypeSet;
 		Type types = { std::type_index(typeid(Components))... };
 		std::sort(types.begin(), types.end());
 		size_t hash = 0;
@@ -327,12 +326,12 @@ namespace ecs
 			JPH::HashCombine(hash, type.hash_code());
 		}
 
-
 		if (myCachedQueries.contains(hash))
 		{
 			return QueryIterator(this, myCachedQueries.at(hash));
 		}
 
+		std::unordered_set<Archetype*> archetypeSet;
 		if (!myComponentIndex.contains(types[0]))
 		{
 			return QueryIterator();
@@ -450,8 +449,8 @@ namespace ecs
 	T* World::AddComponent(EntityID e)
 	{
 		Record& record = myEntityIndex.at(e);
-		
-		assert(!HasComponent<T>(e));
+
+		assert(!HasComponent<T>(e), "Added already existing component to entity");
 		ComponentID componentID = GetComponentID<T>();
 		Archetype& archetype = *record.archetype;
 		std::lock_guard<std::mutex> lock(myMutex);
@@ -463,7 +462,7 @@ namespace ecs
 		MoveEntityFromToArchetype(archetype, e, nextArchetype);
 
 
-		if(std::is_empty<T>::value)
+		if (std::is_empty<T>::value)
 		{
 			return nullptr;
 		}
@@ -476,6 +475,14 @@ namespace ecs
 		}
 		ArchetypeMap& archetypeMap = myComponentIndex.at(componentID);
 		ArchetypeRecord& archetypeRecord = archetypeMap.at(nextArchetypeID);
+
+
+		if (!nextArchetype.HasComponent(GetComponentID<DontDestroyOnLoad>()) && !myClearOnLoadIndex.contains(nextArchetypeID))
+		{
+			myClearOnLoadArchetypeList.emplace_back(&nextArchetype.GetType());
+			size_t index = myClearOnLoadArchetypeList.size();
+			myClearOnLoadIndex.emplace(nextArchetypeID, index);
+		}
 
 		assert(nextArchetype.GetColumn(archetypeRecord.columnIndex)->GetTypeInfo().typeID == typeid(T), "This component is not the right type, imminent pagefault.");
 
@@ -727,12 +734,7 @@ namespace ecs
 
 
 
-		if (!newArchetype.HasComponent(GetComponentID<DontDestroyOnLoad>()) && !myClearOnLoadIndex.contains(newArchetypeID))
-		{
-			myClearOnLoadArchetypeList.emplace_back(&newArchetype.GetType());
-			size_t index = myClearOnLoadArchetypeList.size();
-			myClearOnLoadIndex.emplace(newArchetypeID, index);
-		}
+
 
 
 		return myArchetypeIndex[newType];
