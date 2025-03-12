@@ -11,9 +11,8 @@
 ✔️ Easy to type Queries that return an range-for iterator returning a view class to each entity in that query spanning across multiple archetypes. <br />
 ✔️ Filtered Queries for when you need all entities containing N types as long as they don't contain M types.  
 Returns an range-for iterator returning a view class to each entity in that query spanning across multiple archetypes. <br />
-
 ✔️ Cached Queries, that only gets reset if the underlying memory of the archetype changes. <br />
-
+✔️ (WIP) Staging and merging to allow multi-threaded loading of assets into the Entity-Component-System <br />
 ## Core Concepts
 ### Entity
 ```cpp
