@@ -32,7 +32,7 @@ namespace ecs
 		friend bool operator!= (const QueryIterator& a, const QueryIterator& b);
 		size_t GetArchetypeIndex() const; 
 		size_t GetEntityIndex() const; 
-
+		size_t GetSize() const;
 	private:
 		std::vector<Archetype*> myArchetypes {};
 		size_t myArchetypeIndex{};

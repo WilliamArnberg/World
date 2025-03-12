@@ -124,11 +124,21 @@ namespace ecs
 		void Set(EntityID aEntity, args&&... aArgumentList);
 		/// <summary>
 		/// Registers a system with the given name and pipeline stage.
+		/// The name must be unique.
 		/// </summary>
 		/// <param name="aName">The name of the system being registered.</param>
 		/// <param name="aSystem">The system (function or callable) to be registered. This is a forwarding reference for a callable object.</param>
 		/// <param name="aPipeline">The pipeline stage at which the system should run. Defaults to <see cref="Pipeline::OnUpdate"/>.</param>
 		void system(const char* aName, System&& aSystem, Pipeline aPipeline = Pipeline::OnUpdate) const;
+
+
+		/// <summary>
+		/// Add a system to be removed at the end of the frame with the given name and pipeline stage.
+		/// </summary>
+		/// <param name="aName">The name of the system to be removed.</param>
+		/// <param name="aPipeline">The pipeline stage at which the system is currently runing. </param>
+		void RemoveSystem(const char* aName, Pipeline aPipeline = Pipeline::OnUpdate) const;
+
 
 		/// <summary>
 		/// Observes changes to the specified entity and triggers the provided callback function based on the specified observer type.
@@ -150,6 +160,12 @@ namespace ecs
 		/// It is irreversible, and all data within the ECS will be lost after calling this function.
 		/// </remarks>		
 		void Clear();
+
+		/// <summary>
+		/// Marks an Entity to survive reloading a scene, this adds a component to the the entity aswell as setting all its parents to dont destroy.
+		/// </summary>
+		void SetDontDestroyOnLoad(ecs::EntityID aEntityID);
+
 
 		/// <summary>
 		/// Prepares and returns objects for other systems to clean up when clearing the ECS between levels during runtime.
@@ -180,6 +196,40 @@ namespace ecs
 		/// A pointer to the <see cref="Archetype"/> associated with the given entity, or `nullptr` if the entity does not have an associated archetype.
 		/// </returns>
 		const Archetype* GetArchetype(EntityID id) const;
+
+
+		/// <summary>
+	/// Returns the delta-time for the current frame
+	/// </summary>
+	/// <returns>
+	/// Current delta time.
+	/// </returns>
+		float DeltaTime() const;
+
+		/// <summary>
+		/// Returns the toaltime the world has persisted for
+		/// </summary>
+		/// <returns>
+		/// Total time.
+		/// </returns>
+		float TotalTime() const;
+
+		/// <summary>
+		/// Returns the current fixed update delta time 
+		/// </summary>
+		/// <returns>
+		/// fixed update delta time.
+		/// </returns>
+		float FixedTime() const;
+
+		/// <summary>
+		/// Returns the amount of ticks the update has persisted 
+		/// </summary>
+		/// <returns>
+		/// Amount of ticks.
+		/// </returns>
+		int32_t TickCount() const;
+
 	private:
 		/// <summary>
 		/// Invalidates a cached query by its associated hash, ensuring that future queries are recalculated.
@@ -227,6 +277,8 @@ namespace ecs
 
 		std::unordered_map<ArchetypeID, size_t> myClearOnLoadIndex;
 		std::vector<const Type*> myClearOnLoadArchetypeList;
+		std::vector<ArchetypeID> myClearOnLoadArchetypeIDList;
+
 
 		ObserverMap myObserverIndex;
 		std::unique_ptr<SystemManager> mySystems;
@@ -296,7 +348,7 @@ namespace ecs
 	template <typename T>
 	T* World::GetComponent(EntityID e)
 	{
-		static_assert(!std::is_empty<T>::value); //You cannot fetch tags
+		static_assert(!std::is_empty<T>::value); //You cannot fetch tags! what you want to use is HasComponent<Tag>();
 
 		if (!myEntityIndex.contains(e)) return nullptr;
 		Record& record = myEntityIndex.at(e);
@@ -326,10 +378,10 @@ namespace ecs
 			JPH::HashCombine(hash, type.hash_code());
 		}
 
-		if (myCachedQueries.contains(hash))
-		{
-			return QueryIterator(this, myCachedQueries.at(hash));
-		}
+		//if (myCachedQueries.contains(hash))
+		//{
+		//	return QueryIterator(this, myCachedQueries.at(hash));
+		//}
 
 		std::unordered_set<Archetype*> archetypeSet;
 		if (!myComponentIndex.contains(types[0]))
@@ -448,8 +500,8 @@ namespace ecs
 	template <typename T>
 	T* World::AddComponent(EntityID e)
 	{
+		
 		Record& record = myEntityIndex.at(e);
-
 		assert(!HasComponent<T>(e), "Added already existing component to entity");
 		ComponentID componentID = GetComponentID<T>();
 		Archetype& archetype = *record.archetype;
@@ -503,6 +555,15 @@ namespace ecs
 		if (edges.removeArchetypes)
 		{
 			MoveEntityFromToArchetype(*record.archetype, e, *edges.removeArchetypes);
+
+
+
+			if (!edges.removeArchetypes->HasComponent(GetComponentID<DontDestroyOnLoad>()) && !myClearOnLoadIndex.contains(edges.removeArchetypes->GetID()))
+			{
+				myClearOnLoadArchetypeList.emplace_back(&edges.removeArchetypes->GetType());
+				size_t index = myClearOnLoadArchetypeList.size();
+				myClearOnLoadIndex.emplace(edges.removeArchetypes->GetID(), index);
+			}
 		}
 		else
 		{
@@ -524,6 +585,15 @@ namespace ecs
 			{
 				auto& newArchetype = myArchetypeIndex.at(newType);
 				MoveEntityFromToArchetype(*record.archetype, e, newArchetype);
+
+
+
+				if (!newArchetype.HasComponent(GetComponentID<DontDestroyOnLoad>()) && !myClearOnLoadIndex.contains(newArchetype.GetID()))
+				{
+					myClearOnLoadArchetypeList.emplace_back(&newArchetype.GetType());
+					size_t index = myClearOnLoadArchetypeList.size();
+					myClearOnLoadIndex.emplace(newArchetype.GetID(), index);
+				}
 			}
 			else
 			{
@@ -596,6 +666,15 @@ namespace ecs
 				newArchetype.GetOrAddEdge(componentID).removeArchetypes = nullptr;
 				newArchetype.GetOrAddEdge(componentID).addArchetypes = record.archetype;
 
+
+				if (!newArchetype.HasComponent(GetComponentID<DontDestroyOnLoad>()) && !myClearOnLoadIndex.contains(newArchetype.GetID()))
+				{
+					myClearOnLoadArchetypeList.emplace_back(&newArchetype.GetType());
+					size_t index = myClearOnLoadArchetypeList.size();
+					myClearOnLoadIndex.emplace(newArchetype.GetID(), index);
+				}
+
+				MoveEntityFromToArchetype(*record.archetype, e, newArchetype);
 			}
 
 		}

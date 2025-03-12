@@ -31,6 +31,11 @@ namespace ecs
 		return myID;
 	}
 
+	void Entity::SetDontDestroyOnLoad()
+	{
+		myWorld->SetDontDestroyOnLoad(myID);
+	}
+
 	const JPH::Mat44 ecs::Entity::GetTransform()
 	{
 		auto parent = GetComponent<Parent>();

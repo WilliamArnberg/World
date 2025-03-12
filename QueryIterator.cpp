@@ -59,6 +59,15 @@ namespace ecs {
 		return myEntityIndex;
 	}
 
+	size_t QueryIterator::GetSize() const
+	{
+		size_t size = 0;
+		for (auto x : myArchetypes) {
+			size += x->GetEntityList().size();
+		}
+		return size;
+	}
+
 	
 
 	ecs::QueryIterator& ecs::QueryIterator::operator++()

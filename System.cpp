@@ -1,9 +1,17 @@
 #include "System.h"
 #include "World.h"
 
+#include "pix\pix3.h"
 
+ecs::SystemManager::SystemManager()
+{
+
+}
+static int tick = 0;
+static float loctime = 0;
 bool ecs::SystemManager::Progress()
 {
+	myTimer.Advance();
 	if (!myIsStarted)
 	{
 		OnStart();
@@ -16,17 +24,25 @@ bool ecs::SystemManager::Progress()
 		myDebugIsStarted = true;
 	}
 #endif
-	OnLoad();
-	PostLoad();
+		OnLoad();
+		PostLoad();
 #ifndef _RETAIL
 	DebugPreUpdate();
 	DebugOnUpdate();
 #endif
-	PreUpdate();
-	OnUpdate();
-	OnValidate();
+	/*while (myTimer.ShouldRunFixed())
+	{*/
+		PreUpdate();
+		OnUpdate();
+		OnValidate();
+		//myTimer.FixedTick();
+	/*}*/
+	loctime += myTimer.GetDeltaTime();
+	myTimer.CalculateAlpha();
+
+	OnRenderLoad();
+	PostRenderLoad();
 	PreRender();
-	
 	Render();
 	UIRender();
 #ifndef _RETAIL
@@ -34,8 +50,13 @@ bool ecs::SystemManager::Progress()
 	DebugPostRender();
 #endif
 	PostRender();
-	if(myShouldQuit)
+	RemoveSystems();
+
+	Log::Impl::FinalPrint();
+
+	if (myShouldQuit)
 	{
+		PreQuit();
 		OnQuit();
 		return false;
 	}
@@ -48,32 +69,17 @@ void ecs::SystemManager::AddSystem(const System&& aSystem, const char* aName, Pi
 #if defined(_RETAIL)
 	if (aPipeline == Pipeline::DebugUpdate || aPipeline == Pipeline::DebugRender) return;
 #endif
-	myPipelines[aPipeline].first = aName;
-	myPipelines[aPipeline].second.emplace_back(aSystem);
-	size_t index = myPipelines[aPipeline].second.size() - 1;
+
+	myPipelines[aPipeline].emplace_back(aName, aSystem);
+	size_t index = myPipelines[aPipeline].size() - 1;
 	mySystemIndex[{aName, aPipeline}] = index;
 }
 
-//void ecs::SystemManager::UpdateObservers(ObserverLists& /*aObserverList*/)
-//{
-//	//aObserverList;
-//	/*for (const auto& lists : aObserverList)
-//	{
-//		for (auto& func : lists.second)
-//		{
-//			func()
-//		}
-//		
-//
-//	}*/
-//}
-
 void ecs::SystemManager::RemoveSystem(const char* aName, Pipeline aPipeline)
 {
-	auto index = mySystemIndex[{aName, aPipeline}];
-	auto& systemVec = myPipelines.at(aPipeline).second;
-	systemVec[index] = systemVec.back();
-	systemVec.pop_back();
+	mySystemsToRemoveThisFrame.emplace_back(aName, aPipeline);
+
+
 }
 
 void ecs::SystemManager::Quit()
@@ -83,144 +89,260 @@ void ecs::SystemManager::Quit()
 
 void ecs::SystemManager::DebugOnUpdate()
 {
-	for (auto& system : myPipelines[Pipeline::DebugUpdate].second)
+	PIXBeginEvent(0, "DebugOnUpdate");
+	for (auto& [name, system] : myPipelines[Pipeline::DebugUpdate])
 	{
+		PIXBeginEvent(1, name.c_str());
 		system();
+		PIXEndEvent();
 	}
+	PIXEndEvent();
 }
 
 void ecs::SystemManager::DebugOnStart()
 {
-	for (auto& system : myPipelines[Pipeline::DebugStart].second)
+
+	PIXBeginEvent(10, "DebugOnStart");
+	for (auto& [name, system] : myPipelines[Pipeline::DebugStart])
 	{
+		PIXBeginEvent(11, name.c_str());
 		system();
+		PIXEndEvent();
 	}
+	PIXEndEvent();
 }
 
 void ecs::SystemManager::UIRender()
 {
-	for (auto& system : myPipelines[Pipeline::UIRender].second)
+	PIXBeginEvent(20, "UIRender");
+	for (auto& [name, system] : myPipelines[Pipeline::UIRender])
 	{
+		PIXBeginEvent(21, name.c_str());
 		system();
+		PIXEndEvent();
 	}
+	PIXEndEvent();
+}
+
+void ecs::SystemManager::PreQuit()
+{
+	PIXBeginEvent(30, "PreQuit");
+	for (auto& [name, system] : myPipelines[Pipeline::PreQuit])
+	{
+		PIXBeginEvent(31, name.c_str());
+		system();
+		PIXEndEvent();
+	}
+	PIXEndEvent();
 }
 
 void ecs::SystemManager::OnQuit()
 {
-	for (auto& system : myPipelines[Pipeline::OnQuit].second)
+	PIXBeginEvent(40, "OnQuit");
+	for (auto& [name, system] : myPipelines[Pipeline::OnQuit])
 	{
+		PIXBeginEvent(41, name.c_str());
 		system();
+		PIXEndEvent();
 	}
+	PIXEndEvent();
+}
+
+void ecs::SystemManager::RemoveSystems()
+{
+	for (auto& [name, pipeline] : mySystemsToRemoveThisFrame)
+	{
+		auto index = mySystemIndex[{name, pipeline}];
+		auto& systemVec = myPipelines.at(pipeline);
+		systemVec[index] = std::move(systemVec.back());
+		systemVec.pop_back();
+	}
+	mySystemsToRemoveThisFrame.clear();
 }
 
 void ecs::SystemManager::OnStart()
 {
-	for (auto& system : myPipelines[Pipeline::OnStart].second)
+	PIXBeginEvent(50, "OnStart");
+	for (auto& [name, system] : myPipelines[Pipeline::OnStart])
 	{
+		PIXBeginEvent(51, name.c_str());
 		system();
+		PIXEndEvent();
 	}
+	PIXEndEvent();
 }
 
 void ecs::SystemManager::OnLoad()
 {
-	for (auto& system : myPipelines[Pipeline::OnLoad].second)
+	PIXBeginEvent(60, "OnLoad");
+	for (auto& [name, system] : myPipelines[Pipeline::OnLoad])
 	{
+		PIXBeginEvent(61, name.c_str());
 		system();
+		PIXEndEvent();
 	}
+	PIXEndEvent();
 }
 
 void ecs::SystemManager::PostLoad()
 {
-	for (auto& system : myPipelines[Pipeline::PostLoad].second)
+	PIXBeginEvent(70, "PostLoad");
+	for (auto& [name, system] : myPipelines[Pipeline::PostLoad])
 	{
+		PIXBeginEvent(71, name.c_str());
 		system();
+		PIXEndEvent();
 	}
+	PIXEndEvent();
 }
 
 void ecs::SystemManager::DebugPreUpdate()
 {
-	for (auto& system : myPipelines[Pipeline::DebugPreUpdate].second)
+	PIXBeginEvent(80, "DebugPreUpdate");
+	for (auto& [name, system] : myPipelines[Pipeline::DebugPreUpdate])
 	{
+		PIXBeginEvent(81, name.c_str());
 		system();
+		PIXEndEvent();
 	}
+	PIXEndEvent();
 }
 
 void ecs::SystemManager::PreUpdate()
 {
-	for (auto& system : myPipelines[Pipeline::PreUpdate].second)
+	PIXBeginEvent(90, "PreUpdate");
+	for (auto& [name, system] : myPipelines[Pipeline::PreUpdate])
 	{
+		PIXBeginEvent(91, name.c_str());
 		system();
+		PIXEndEvent();
 	}
+	PIXEndEvent();
 }
 
 void ecs::SystemManager::OnUpdate()
 {
-	for (auto& system : myPipelines[Pipeline::OnUpdate].second)
+	PIXBeginEvent(100, "OnUpdate");
+	for (auto& [name, system] : myPipelines[Pipeline::OnUpdate])
 	{
+		PIXBeginEvent(101, name.c_str());
 		system();
+		PIXEndEvent();
 	}
+	PIXEndEvent();
 }
 
 void ecs::SystemManager::OnValidate()
 {
-	for (auto& system : myPipelines[Pipeline::OnValidate].second)
+	PIXBeginEvent(110, "OnValidate");
+	for (auto& [name, system] : myPipelines[Pipeline::OnValidate])
 	{
+		PIXBeginEvent(111, name.c_str());
 		system();
+		PIXEndEvent();
 	}
+	PIXEndEvent();
 }
 
 void ecs::SystemManager::PreRender()
 {
-	for (auto& system : myPipelines[Pipeline::PreRender].second)
+	PIXBeginEvent(120, "PreRender");
+	for (auto& [name, system] : myPipelines[Pipeline::PreRender])
 	{
+		PIXBeginEvent(121, name.c_str());
 		system();
+		PIXEndEvent();
 	}
+	PIXEndEvent();
 }
 
 void ecs::SystemManager::OnRenderLoad()
 {
-	for (auto& system : myPipelines[Pipeline::OnRenderLoad].second)
+	PIXBeginEvent(130, "OnRenderLoad");
+	for (auto& [name, system] : myPipelines[Pipeline::OnRenderLoad])
 	{
+		PIXBeginEvent(131, name.c_str());
 		system();
+		PIXEndEvent();
 	}
+	PIXEndEvent();
 }
 
 void ecs::SystemManager::PostRenderLoad()
 {
-	for (auto& system : myPipelines[Pipeline::PostRenderLoad].second)
+	PIXBeginEvent(140, "PostRenderLoad");
+	for (auto& [name, system] : myPipelines[Pipeline::PostRenderLoad])
 	{
+		PIXBeginEvent(141, name.c_str());
 		system();
+		PIXEndEvent();
 	}
+	PIXEndEvent();
 }
 
 void ecs::SystemManager::Render()
 {
-	for (auto& system : myPipelines[Pipeline::Render].second)
+	PIXBeginEvent(150, "Render");
+	for (auto& [name, system] : myPipelines[Pipeline::Render])
 	{
+		PIXBeginEvent(151, name.c_str());
 		system();
+		PIXEndEvent();
 	}
+	PIXEndEvent();
 }
 
 void ecs::SystemManager::DebugRender()
 {
-	for (auto& system : myPipelines[Pipeline::DebugRender].second)
+	PIXBeginEvent(160, "DebugRender");
+	for (auto& [name, system] : myPipelines[Pipeline::DebugRender])
 	{
+		PIXBeginEvent(161, name.c_str());
 		system();
+		PIXEndEvent();
 	}
+	PIXEndEvent();
 }
 
 void ecs::SystemManager::DebugPostRender()
 {
-	for (auto& system : myPipelines[Pipeline::DebugPostRender].second)
+	PIXBeginEvent(170, "DebugPostRender");
+	for (auto& [name, system] : myPipelines[Pipeline::DebugPostRender])
 	{
+		PIXBeginEvent(171, name.c_str());
 		system();
+		PIXEndEvent();
 	}
+	PIXEndEvent();
 }
 
 void ecs::SystemManager::PostRender()
 {
-	for (auto& system : myPipelines[Pipeline::PostRender].second)
+	PIXBeginEvent(180, "PostRender");
+	for (auto& [name, system] : myPipelines[Pipeline::PostRender])
 	{
+		PIXBeginEvent(181, name.c_str());
 		system();
+		PIXEndEvent();
 	}
+		PIXEndEvent();
+}
+float ecs::SystemManager::DeltaTime() const
+{
+	return myTimer.GetDeltaTime();
+}
+
+float ecs::SystemManager::FixedTime() const
+{
+	return myTimer.GetFixedTime();
+}
+
+float ecs::SystemManager::TotalTime() const
+{
+	return myTimer.GetTotalTime();
+}
+
+int ecs::SystemManager::TickCount() const
+{
+	return myTimer.GetTickCount();
 }

@@ -72,6 +72,11 @@ namespace ecs {
 		inline T* GetComponent();
 
 		/// <summary>
+		/// Marks an Entity to survive reloading a scene, this adds a component to the the entity aswell as setting all its parents to dont destroy.
+		/// </summary>
+		void SetDontDestroyOnLoad();
+
+		/// <summary>
 		/// Retrieves the entity's transform in world space, represented as a 4x4 matrix.
 		/// </summary>
 		/// <returns>

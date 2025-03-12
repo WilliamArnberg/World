@@ -2,7 +2,7 @@
 #include "ecs_World.h"
 
 #include <utility>
-
+#include <mutex>
 #include "ComponentTypes.h"
 #include "Jolt/Math/Mat44.h"
 #include "Tools/PerfJuggler.h"
@@ -10,6 +10,8 @@
 #include "Entity.h"
 #include "QueryIterator.h"
 #include "Collision/ColliderComponent.h"
+#include "Collision/RagdollComponent.h"
+
 #undef min
 
 namespace ecs {
@@ -37,18 +39,15 @@ namespace ecs {
 
 	ecs::Entity ecs::World::Create()
 	{
+		const std::lock_guard<std::mutex> lock(myMutex);
 		EntityID id = GenerateID();
+		
 		Entity e(id, this);
 		Type emptyType{};
 		Archetype& emptyArchetype = myArchetypeIndex.at(emptyType);
 		emptyArchetype.AddEntity(id);
 
-		//Record record;
-		//record.archetype = &emptyArchetype;
-		//record.row = emptyArchetype.GetLastRow();
-
-		myEntityIndex.emplace(id, Record{&emptyArchetype,emptyArchetype.GetLastRow()});
-
+		myEntityIndex.emplace(id, Record{ &emptyArchetype,emptyArchetype.GetLastRow() });
 		return e;
 	}
 
@@ -57,27 +56,27 @@ namespace ecs {
 		if (!myEntityIndex.contains(id)) return false;
 
 		auto record = myEntityIndex.at(id);
-		auto archetype = *record.archetype;
+		Archetype* archetype = record.archetype;
 		size_t sourceRow = record.row;
 		size_t lastRow = 0;
 
-		if (!archetype.IsEmpty())
+		if (!archetype->IsEmpty())
 		{
-			lastRow = archetype.GetLastRow();
+			lastRow = archetype->GetLastRow();
 		}
 
-		std::vector<ecs::EntityID>& entities = archetype.GetEntityList();
+		std::vector<ecs::EntityID>& entities = archetype->GetEntityList();
 
 		if (sourceRow != lastRow)
 		{
-			ecs::EntityID entityToShuffle = archetype.GetEntity(lastRow);
+			ecs::EntityID entityToShuffle = archetype->GetEntity(lastRow);
 
 			ecs::Record& shuffleRecord = myEntityIndex.at(entityToShuffle);
 			shuffleRecord.row = sourceRow; //this is the shuffled entities new row.
 			entities.at(shuffleRecord.row) = entities.at(lastRow);
-			archetype.ShuffleEntity(lastRow, sourceRow);
+			archetype->ShuffleEntity(lastRow, sourceRow);
 		}
-		InvalidateCachedQueryFromMove(&archetype, nullptr);
+		InvalidateCachedQueryFromMove(archetype, nullptr);
 
 		myEntityIndex.erase(id);
 		entities.pop_back();
@@ -97,6 +96,26 @@ namespace ecs {
 	const ecs::Archetype* ecs::World::GetArchetype(EntityID aEntity) const
 	{
 		return myEntityIndex.at(aEntity).archetype;
+	}
+
+	float World::DeltaTime() const
+	{
+		return mySystems->DeltaTime();
+	}
+
+	float World::TotalTime() const
+	{
+		return mySystems->TotalTime();
+	}
+
+	float World::FixedTime() const
+	{
+		return mySystems->FixedTime();
+	}
+
+	int32_t World::TickCount() const
+	{
+		return mySystems->TickCount();
 	}
 
 	void World::InvalidateCachedQueryFromMove(Archetype* oldArchetype, Archetype* newArchetype)
@@ -134,24 +153,53 @@ namespace ecs {
 		mySystems->AddSystem(std::move(aSystem), aName, aPipeline);
 	}
 
+	void World::RemoveSystem(const char* aName, Pipeline aPipeline) const
+	{
+		mySystems->RemoveSystem(aName,aPipeline);
+	}
+
 
 	void World::Clear()
 	{
 		myEntityIndex.clear();
 		myArchetypeIndex.clear();
 		myComponentIndex.clear();
+		myClearOnLoadArchetypeList.clear();
+		myClearOnLoadArchetypeIDList.clear();
+		myClearOnLoadIndex.clear();
+		Type emptyType{};
+		myArchetypeIndex[emptyType];
+		myArchetypeIndex[emptyType].SetID(myArchetypeIndex.size());
+		myArchetypeIndex[emptyType].SetType(emptyType);
 	}
 
+	void World::SetDontDestroyOnLoad(ecs::EntityID aEntityID)
+	{
+		if (!HasComponent<DontDestroyOnLoad>(aEntityID))
+		{
+			AddComponent<DontDestroyOnLoad>(aEntityID);
+		}
+
+		if (HasComponent<Parent>(aEntityID))
+		{
+			ecs::EntityID parent = GetComponent<Parent>(aEntityID)->GetParent();
+			if (parent != ECS_ENTITY_NULL)
+			{
+				SetDontDestroyOnLoad(parent);
+			}
+		}
+	}
 	CleanUp World::PrepareCleanupForLevelLoad()
 	{
+		myCachedQueries.clear();
 		std::vector<std::vector<ecs::EntityID>> entitiesToRemove;
 		CleanUp cleanUp{};
-
-		for (auto e : FilteredQuery<CCollider>(std::tuple<DontDestroyOnLoad>()))
+		
+		for (auto e : FilteredQuery<CCollider>(std::tuple<DontDestroyOnLoad,RagdollTag>())) 
 		{
+			
 			auto col = e.GetComponent<CCollider>();
 			//Parent* parent = e.GetComponent<Parent>(); 
-			
 			cleanUp.colliderEntitiesToRemove.emplace_back(col->myBodyID, e.GetID());
 
 		}

@@ -2,6 +2,8 @@
 
 #include <functional>
 #include <string>
+#include <vector>
+#include "WorldTimer.h"
 
 namespace ecs {
 	using System = std::function<void()>;
@@ -9,20 +11,20 @@ namespace ecs {
 	enum class Pipeline
 	{
 
+		OnStart,	//This runs once when the game starts.
 		OnLoad,		//Load data into ECS, keyboard and mouse input etc.
 		PostLoad,	//Process Loaded data
 		PreUpdate,	//Things that must happen before actual game logic,clean-up etc
 		OnUpdate,	//Gameplay and systems
 		OnValidate, //Validate what happened in the previous update for instance collision resolving
-		OnStart,	//This runs once when the game starts.
 		OnRenderLoad,
 		PostRenderLoad,
 		PreRender,	//Begin Frame
 		Render,		//Renders the scene
 		UIRender,
 		PostRender, //EndFrame Cleanup
+		PreQuit, //CleanUp before shutting of systems
 		OnQuit,
-
 		DebugStart,
 		DebugPreUpdate,
 		DebugUpdate,
@@ -37,18 +39,22 @@ namespace ecs {
 		{
 			std::size_t hash1 = std::hash<T1>{}(pair.first);
 			std::size_t hash2 = std::hash<T2>{}(pair.second);
-			return hash1 ^ (hash2 << 1); 
+			return hash1 ^ (hash2 << 1);
 		}
 	};
 	class SystemManager
 	{
 	public:
+		SystemManager();
 		bool Progress();
 		void AddSystem(const System&& aSystem, const char* aName, Pipeline aPipeline = Pipeline::OnUpdate);
 		void RemoveSystem(const char* aName, Pipeline aPipeline);
 		void Quit();
+		float DeltaTime() const;
+		float FixedTime() const;
+		float TotalTime() const;
+		int TickCount() const;
 	private:
-		void PostRender();
 		void DebugOnStart();
 		void OnStart();
 		void OnLoad();
@@ -60,16 +66,20 @@ namespace ecs {
 		void OnRenderLoad();
 		void PostRenderLoad();
 		void Render();
+		void PostRender();
 		void UIRender();
+		void PreQuit();
 		void OnQuit();
+		void RemoveSystems();
 
 		void DebugOnUpdate();
 		void DebugPreUpdate();
 		void DebugRender();
 		void DebugPostRender();
-
-		std::unordered_map <Pipeline, std::pair<std::string, std::vector<System>>> myPipelines;
-		std::unordered_map<std::pair<std::string,Pipeline>, size_t,PairHash> mySystemIndex;
+		std::unordered_map <Pipeline, std::vector<std::pair<std::string, System>>> myPipelines;
+		std::unordered_map<std::pair<std::string, Pipeline>, size_t, PairHash> mySystemIndex;
+		std::vector<std::pair<std::string, ecs::Pipeline>> mySystemsToRemoveThisFrame;
+		WorldTimer myTimer;
 		bool myShouldQuit = false;
 		bool myIsStarted = false;
 #ifndef _RETAIL

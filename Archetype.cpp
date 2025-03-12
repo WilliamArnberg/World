@@ -67,7 +67,7 @@ namespace ecs
 
 	bool Archetype::HasComponent(ComponentID aComponentID) const
 	{
-		return typeSet.count(aComponentID);
+		return typeSet.contains(aComponentID);
 	}
 
 	size_t Archetype::GetNumEntities() const

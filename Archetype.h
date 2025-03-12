@@ -210,6 +210,7 @@ namespace ecs
 
 		template <typename... Filter>
 		bool			Contains(std::tuple<Filter...> filters) const;
+
 		ArchetypeEdge& AddEdge(ComponentID aComponentID);
 		int			FindColumnIndex(ComponentID aComponentID) const;
 		void			ShuffleEntity(size_t aFromRow, size_t aToRow);
@@ -248,8 +249,7 @@ namespace ecs
 		return std::apply(
 			[this](auto&&... args)
 			{
-			// Return false immediately if any of the components is not present
-			return (HasComponent(typeid(args)) && ...);
+			return (HasComponent(typeid(args)) || ...);
 
 			}, filters);
 	}
