@@ -57,6 +57,12 @@ namespace ecs
 		/// <returns>"Entity View Class"</returns>
 		Entity GetEntity(EntityID id);
 
+	/// <summary>
+	/// Check if a Entity is null
+	/// </summary>
+	/// <param name="e"> Entity ID </param>
+	/// <returns>"true or false"</returns>
+		bool IsNull(EntityID id);
 		/// <summary>
 		/// Check if a entity has a given component type.
 		/// </summary>
@@ -500,7 +506,7 @@ namespace ecs
 	template <typename T>
 	T* World::AddComponent(EntityID e)
 	{
-		
+
 		Record& record = myEntityIndex.at(e);
 		assert(!HasComponent<T>(e), "Added already existing component to entity");
 		ComponentID componentID = GetComponentID<T>();

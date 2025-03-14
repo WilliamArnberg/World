@@ -93,6 +93,11 @@ namespace ecs {
 		return Entity(id, this);
 	}
 
+	bool World::IsNull(EntityID id)
+	{
+		return !myEntityIndex.contains(id);
+	}
+
 	const ecs::Archetype* ecs::World::GetArchetype(EntityID aEntity) const
 	{
 		return myEntityIndex.at(aEntity).archetype;

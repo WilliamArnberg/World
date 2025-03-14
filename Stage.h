@@ -5,7 +5,8 @@ namespace ecs
 	{
 	public:
 		void Create();
-
+		void Merge();
+		
 	private:
 		World* myWorld;
 		std::unordered_map<ComponentID, ArchetypeMap> myComponentIndex; // Used to lookup components in archetypes

@@ -16,12 +16,11 @@ namespace ecs
 	bool Entity::IsNull()
 	{
 		if(myID == 0) return true;
-
-		return false;
+		return myWorld->IsNull(myID);
 	}
 	bool Entity::Destroy()
 	{
-		
+
 		bool entityWasRemoved = myWorld->DestroyEntity(myID);
 		myID = 0;
 		return entityWasRemoved;
@@ -53,7 +52,7 @@ namespace ecs
 	{
 		JPH::Mat44 localTransform = JPH::Mat44::sIdentity();
 		localTransform.SetDiagonal3(JPH::Vec3(GetComponent<Scale>()->scale));
-		localTransform = JPH::Mat44::sRotation(GetComponent<Rotation>()->rotation) * localTransform;
+		localTransform = JPH::Mat44::sRotation(GetComponent<Rotation>()->rotation.Normalized()) * localTransform;
 		localTransform.SetTranslation(JPH::Vec3(GetComponent<Position>()->position));
 		return localTransform;
 	}
@@ -80,17 +79,7 @@ namespace ecs
 
 	JPH::Vec3 ecs::Entity::GetWorldPosition()
 	{
-		auto parent = GetComponent<Parent>();
-		auto localPos = GetComponent<Position>();
-		if (!parent)
-		{
-			return JPH::Vec3(localPos->position);
-		}
-		else
-		{
-			Entity myParent(parent->GetParent(), myWorld);
-			return JPH::Vec3(localPos->position) + myParent.GetWorldPosition();
-		}
+		return GetTransform().GetTranslation();
 	}
 
 	JPH::Quat ecs::Entity::GetWorldRotation()
