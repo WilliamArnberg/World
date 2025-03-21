@@ -1,6 +1,6 @@
 #include "stdafx.h"
 #include "ecs_World.h"
-
+#include "Stage.h"
 #include <utility>
 #include <mutex>
 #include "ComponentTypes.h"
@@ -23,7 +23,7 @@ namespace ecs {
 
 		Type emptyType{};
 		myArchetypeIndex[emptyType];
-		myArchetypeIndex[emptyType].SetID(myArchetypeIndex.size());
+		myArchetypeIndex[emptyType].SetID(GenerateArchetypeID());
 		myArchetypeIndex[emptyType].SetType(emptyType);
 
 	}
@@ -36,10 +36,10 @@ namespace ecs {
 	{
 	aValueToChange = aValueToChange | 1 << bit;
 	}*/
-
 	ecs::Entity ecs::World::Create()
 	{
 		const std::lock_guard<std::mutex> lock(myMutex);
+
 		EntityID id = GenerateID();
 		
 		Entity e(id, this);
@@ -48,6 +48,23 @@ namespace ecs {
 		emptyArchetype.AddEntity(id);
 
 		myEntityIndex.emplace(id, Record{ &emptyArchetype,emptyArchetype.GetLastRow() });
+		
+
+
+
+		return e;
+	}
+
+	Entity World::Create(ecs::EntityID aEntityID)
+	{
+		const std::lock_guard<std::mutex> lock(myMutex);
+		
+		Entity e(aEntityID, this);
+		Type emptyType{};
+		Archetype& emptyArchetype = myArchetypeIndex.at(emptyType);
+		emptyArchetype.AddEntity(aEntityID);
+
+		myEntityIndex.emplace(aEntityID, Record{ &emptyArchetype,emptyArchetype.GetLastRow() });
 		return e;
 	}
 
@@ -123,6 +140,18 @@ namespace ecs {
 		return mySystems->TickCount();
 	}
 
+	void World::CreateStage(std::string& aStageName)
+	{
+		myStages.emplace(aStageName,std::make_unique<Stage>(this));
+	}
+
+	Stage* World::GetStage(std::string& aStageName)
+	{
+		if(!myStages.contains(aStageName)) return nullptr;
+
+		return myStages.at(aStageName).get();
+	}
+
 	void World::InvalidateCachedQueryFromMove(Archetype* oldArchetype, Archetype* newArchetype)
 	{
 		if (oldArchetype)
@@ -174,7 +203,7 @@ namespace ecs {
 		myClearOnLoadIndex.clear();
 		Type emptyType{};
 		myArchetypeIndex[emptyType];
-		myArchetypeIndex[emptyType].SetID(myArchetypeIndex.size());
+		myArchetypeIndex[emptyType].SetID(GenerateArchetypeID());
 		myArchetypeIndex[emptyType].SetType(emptyType);
 	}
 
@@ -245,9 +274,17 @@ namespace ecs {
 
 	ecs::EntityID World::GenerateID()
 	{
+		const std::lock_guard<std::mutex> lock(myEntityGenerationMutex);
 		ecs::EntityID id = myNextEntity++;
 
 		return id;
+	}
+
+	ecs::ArchetypeID World::GenerateArchetypeID()
+	{
+
+		ecs::ArchetypeID archetypeID = myArchetypeIndex.size();
+		return archetypeID++;
 	}
 
 	void ecs::World::MoveEntityFromToArchetype(Archetype& aArchetype, EntityID aEntity, Archetype& aNewArchetype)
@@ -310,12 +347,14 @@ namespace ecs {
 
 		std::vector<ecs::EntityID>& entities = aArchetype.GetEntityList();
 
+
 		if (sourceRow != lastRow)
 		{
 			ecs::EntityID entityToShuffle = aArchetype.GetEntity(lastRow);
 			ecs::Record& shuffleRecord = myEntityIndex.at(entityToShuffle);
 			shuffleRecord.row = sourceRow;
 			entities.at(shuffleRecord.row) = entities.at(lastRow);
+	
 			aArchetype.ShuffleEntity(lastRow, sourceRow);
 		}
 

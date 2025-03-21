@@ -12,7 +12,6 @@
 #include <string>
 #include <vector>
 #include <cstddef>
-
 #include "ComponentTypes.h"
 #include "System.h"
 #include "Archetype.h"
@@ -21,6 +20,7 @@
 #define NOMINMAX
 namespace ecs
 {
+	class Stage;
 	class Entity;
 	class SystemManager;
 	class QueryIterator;
@@ -34,6 +34,7 @@ namespace ecs
 	public:
 		friend Archetype;
 		friend QueryIterator;
+		friend Stage;
 		World();
 		~World();
 
@@ -42,6 +43,10 @@ namespace ecs
 		/// </summary>
 		/// <returns>"Entity View Class"</returns>
 		Entity Create();
+
+		Entity Create(ecs::EntityID aEntityID);
+
+		
 
 		/// <summary>
 		/// Destroys the passed entity along with all it's components.
@@ -236,7 +241,9 @@ namespace ecs
 		/// </returns>
 		int32_t TickCount() const;
 
-	private:
+		void CreateStage(std::string& aStageName);
+		Stage* GetStage(std::string& aStageName);
+	protected:
 		/// <summary>
 		/// Invalidates a cached query by its associated hash, ensuring that future queries are recalculated.
 		/// </summary>
@@ -253,6 +260,8 @@ namespace ecs
 		/// A unique `entity` ID that can be used to identify an entity in the ECS.
 		/// </returns>
 		ecs::EntityID GenerateID();
+
+		ecs::ArchetypeID GenerateArchetypeID();
 
 		/// <summary>
 		/// Derives a new archetype from the source archetype.
@@ -271,21 +280,22 @@ namespace ecs
 		template<typename T>
 		ComponentTypeInfo RegisterComponent();
 
-
+		std::mutex myEntityGenerationMutex;
+		std::mutex myArchetypeGenerationMutex;
 		std::mutex myMutex;
 		ecs::EntityID myNextEntity = 1;
 		std::unordered_map<ComponentID, ArchetypeMap> myComponentIndex; // Used to lookup components in archetypes
 		std::unordered_map<Type, Archetype, TypeHash, TypeEqual> myArchetypeIndex; // Find an archetype by its list of component ids
-		std::unordered_map<EntityID, Record> myEntityIndex;		// Find the archetype for an entity
+		EntityIndex myEntityIndex;		// Find the archetype for an entity
 		std::unordered_map<CachedQueryHash, std::vector<Archetype*>> myCachedQueries;
-
+		
 		std::unordered_map<ArchetypeID, std::unordered_set<CachedQueryHash>> myArchetypeToQueries;
 
 		std::unordered_map<ArchetypeID, size_t> myClearOnLoadIndex;
 		std::vector<const Type*> myClearOnLoadArchetypeList;
 		std::vector<ArchetypeID> myClearOnLoadArchetypeIDList;
-
-
+		
+		std::unordered_map<std::string,std::unique_ptr<Stage>> myStages;
 		ObserverMap myObserverIndex;
 		std::unique_ptr<SystemManager> mySystems;
 	};
@@ -608,7 +618,7 @@ namespace ecs
 				ComponentID componentID = GetComponentID<T>();
 
 
-				newArchetype.SetID(myArchetypeIndex.size());
+				newArchetype.SetID(GenerateArchetypeID());
 				newArchetype.SetType(newType);
 
 				size_t numComponents{ 0 };
@@ -734,7 +744,7 @@ namespace ecs
 		}
 
 		myArchetypeIndex[newType] = Archetype();
-		myArchetypeIndex[newType].SetID(myArchetypeIndex.size());
+		myArchetypeIndex[newType].SetID(GenerateArchetypeID());
 		myArchetypeIndex[newType].SetType(newType);
 		auto& newArchetype = myArchetypeIndex[newType];
 		ArchetypeID newArchetypeID = newArchetype.GetID();

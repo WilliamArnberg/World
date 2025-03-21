@@ -1,10 +1,55 @@
 #include "Archetype.h"
 namespace ecs
 {
+	Archetype::Archetype(Archetype&& aArchetype) noexcept
+	{
+		myID = aArchetype.myID;
+		myType = aArchetype.myType;
+		typeSet = std::move(aArchetype.typeSet);
+		components.resize(aArchetype.components.size());
+		//components = std::move(aArchetype.components);
+		for(int i = 0; i < components.size(); i++)
+		{
+			components[i] = std::move(aArchetype.components[i]);
+		}
+
+		entities = std::move(aArchetype.entities);
+		edges = std::move(aArchetype.edges);
+		myMaxCount = aArchetype.myMaxCount;
+
+
+	}
+	Archetype& Archetype::operator=(const Archetype& aArchetype)
+	{
+		myID = aArchetype.myID;
+		myType = aArchetype.myType;
+		typeSet = aArchetype.typeSet;
+		components = aArchetype.components;
+		entities = aArchetype.entities;
+		edges = aArchetype.edges;
+		myMaxCount = aArchetype.myMaxCount;
+		return *this;
+	}
+	Archetype& Archetype::operator=(Archetype&& aArchetype)
+	{
+		myID = aArchetype.myID;
+		myType = aArchetype.myType;
+		typeSet = std::move(aArchetype.typeSet);
+		components.resize(aArchetype.components.size());
+		for(int i = 0; i < aArchetype.components.size(); i++)
+		{
+			components[i] = std::move(aArchetype.components[i]);
+		}
+		entities = std::move(aArchetype.entities);
+		edges = std::move(aArchetype.edges);
+		myMaxCount = aArchetype.myMaxCount;
+		return *this;
+	}
 	size_t Archetype::GetLastRow() const
 	{
 		return entities.size() - 1;
 	}
+	
 	ecs::ArchetypeID ecs::Archetype::GetID() const
 	{
 		return myID;
@@ -105,6 +150,15 @@ namespace ecs
 		}
 	}
 
+	void Archetype::Reset(Archetype& aArchetype)
+	{
+		components.clear();
+		components = std::move(aArchetype.components);
+		myMaxCount = aArchetype.GetMaxCount();
+		entities = std::move(aArchetype.GetEntityList());
+		
+	}
+
 	void Archetype::AddEmptyComp()
 	{
 		components.emplace_back();
@@ -119,6 +173,7 @@ namespace ecs
 
 	void Archetype::AddEntity(ecs::EntityID aEntity)
 	{
+
 		entities.emplace_back(aEntity);
 	}
 
@@ -145,7 +200,7 @@ namespace ecs
 		for (int i = 0; i < myType.size(); i++)
 		{
 			if (aComponentID != myType[i]) continue;
-
+			
 			return i;
 		}
 
@@ -172,6 +227,8 @@ namespace ecs
 			}
 		}
 	}
+
+	
 
 	ArchetypeEdge& Archetype::GetEdge(ComponentID aID)
 	{
@@ -225,12 +282,12 @@ namespace ecs
 		}
 		else
 		{
-			for(size_t index = 0; index < myCapacity / myTypeInfo.size; index++ )
+			for (size_t index = 0; index < myCapacity / myTypeInfo.size; index++)
 			{
 				void* sourceComp = GetComponent(index);
 				void* targetComp = newData.get() + (index * GetElementSize());
-				MoveOrCopyDataFromTo(sourceComp,targetComp);
-			
+				MoveOrCopyDataFromTo(sourceComp, targetComp);
+
 			}
 		}
 

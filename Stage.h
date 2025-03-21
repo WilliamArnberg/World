@@ -1,17 +1,21 @@
 #pragma once
+#include <unordered_map>
+#include "Ecs_Aliases.h"
 namespace ecs
 {
-	class Stage
+	class World;
+	class Stage : public World
 	{
 	public:
-		void Create();
-		void Merge();
+		friend World;
+		Stage(World* aWorld);
+		~Stage();
 		
+		Entity CreateEntity();
+		void Merge();
+		void ResetStage();
 	private:
 		World* myWorld;
-		std::unordered_map<ComponentID, ArchetypeMap> myComponentIndex; // Used to lookup components in archetypes
-		std::unordered_map<Type, Archetype, TypeHash, TypeEqual> myArchetypeIndex; // Find an archetype by its list of component ids
-		std::unordered_map<EntityID, Record> myEntityIndex;		// Find the archetype for an entity
 	};
 
 }

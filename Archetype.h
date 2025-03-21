@@ -48,66 +48,68 @@ namespace ecs
 		void (*destruct)(void* obj) = nullptr;						// Destructor
 		bool isTrivial = false;
 
-    ComponentTypeInfo()
-        : typeID(typeid(nullptr)), size(0), alignment(0), construct(nullptr), copy(nullptr), 
-          move(nullptr), destruct(nullptr), isTrivial(false) {}
+		ComponentTypeInfo()
+			: typeID(typeid(nullptr)), size(0), alignment(0), construct(nullptr), copy(nullptr),
+			move(nullptr), destruct(nullptr), isTrivial(false) {
+		}
 
-    ComponentTypeInfo(const ComponentTypeInfo& aOther)
-        : typeID(aOther.typeID), size(aOther.size), alignment(aOther.alignment),
-          construct(aOther.construct), copy(aOther.copy), move(aOther.move),
-          destruct(aOther.destruct), isTrivial(aOther.isTrivial) {}
+		ComponentTypeInfo(const ComponentTypeInfo& aOther)
+			: typeID(aOther.typeID), size(aOther.size), alignment(aOther.alignment),
+			construct(aOther.construct), copy(aOther.copy), move(aOther.move),
+			destruct(aOther.destruct), isTrivial(aOther.isTrivial) {
+		}
 
-    ComponentTypeInfo(ComponentTypeInfo&& aOther) noexcept
-        : typeID(aOther.typeID), size(aOther.size), alignment(aOther.alignment),
-          construct(aOther.construct), copy(aOther.copy), move(aOther.move),
-          destruct(aOther.destruct), isTrivial(aOther.isTrivial)
-    {
-        aOther.construct = nullptr;
-        aOther.copy = nullptr;
-        aOther.move = nullptr;
-        aOther.destruct = nullptr;
-        aOther.isTrivial = false;
-    }
+		ComponentTypeInfo(ComponentTypeInfo&& aOther) noexcept
+			: typeID(aOther.typeID), size(aOther.size), alignment(aOther.alignment),
+			construct(aOther.construct), copy(aOther.copy), move(aOther.move),
+			destruct(aOther.destruct), isTrivial(aOther.isTrivial)
+		{
+			aOther.construct = nullptr;
+			aOther.copy = nullptr;
+			aOther.move = nullptr;
+			aOther.destruct = nullptr;
+			aOther.isTrivial = false;
+		}
 
-    ComponentTypeInfo& operator=(const ComponentTypeInfo& aOther)
-    {
-        if (this != &aOther)  
-        {
-            
-            typeID = aOther.typeID;
-            size = aOther.size;
-            alignment = aOther.alignment;
-            construct = aOther.construct;
-            copy = aOther.copy;
-            move = aOther.move;
-            destruct = aOther.destruct;
-            isTrivial = aOther.isTrivial;
-        }
-        return *this;
-    }
+		ComponentTypeInfo& operator=(const ComponentTypeInfo& aOther)
+		{
+			if (this != &aOther)
+			{
+
+				typeID = aOther.typeID;
+				size = aOther.size;
+				alignment = aOther.alignment;
+				construct = aOther.construct;
+				copy = aOther.copy;
+				move = aOther.move;
+				destruct = aOther.destruct;
+				isTrivial = aOther.isTrivial;
+			}
+			return *this;
+		}
 
 
-    ComponentTypeInfo& operator=(ComponentTypeInfo&& aOther) noexcept
-    {
-        if (this != &aOther)  
-        {
-            typeID = aOther.typeID;
-            size = aOther.size;
-            alignment = aOther.alignment;
-            construct = aOther.construct;
-            copy = aOther.copy;
-            move = aOther.move;
-            destruct = aOther.destruct;
-            isTrivial = aOther.isTrivial;
+		ComponentTypeInfo& operator=(ComponentTypeInfo&& aOther) noexcept
+		{
+			if (this != &aOther)
+			{
+				typeID = aOther.typeID;
+				size = aOther.size;
+				alignment = std::move(aOther.alignment);
+				construct = std::move(aOther.construct);
+				copy = std::move(aOther.copy);
+				move = std::move(aOther.move);
+				destruct = std::move(aOther.destruct);
+				isTrivial = aOther.isTrivial;
 
-            aOther.construct = nullptr;
-            aOther.copy = nullptr;
-            aOther.move = nullptr;
-            aOther.destruct = nullptr;
-            aOther.isTrivial = false;
-        }
-        return *this;
-    }
+				aOther.construct = nullptr;
+				aOther.copy = nullptr;
+				aOther.move = nullptr;
+				aOther.destruct = nullptr;
+				aOther.isTrivial = false;
+			}
+			return *this;
+		}
 
 	};
 
@@ -117,7 +119,7 @@ namespace ecs
 		Column() = default;
 		~Column()
 		{
-			myBuffer.reset();
+			//myBuffer.reset();
 		};
 		Column(Column&& other) noexcept
 		{
@@ -130,10 +132,10 @@ namespace ecs
 		{
 			if (this != &other)
 			{
-				myBuffer = std::move(other.myBuffer);
 				myCapacity = other.myCapacity;
 				myCurrentMemoryUsed = other.myCurrentMemoryUsed;
-				myTypeInfo = other.myTypeInfo;
+				myTypeInfo = std::move(other.myTypeInfo);
+				myBuffer.reset(other.Release());
 			}
 			return *this;
 		}
@@ -165,7 +167,7 @@ namespace ecs
 			assert(aIndex <= (myCapacity), "Trying to access element outside of buffer");
 			return myBuffer.get() + (aIndex * GetElementSize());
 		}
-		void MoveOrCopyDataFromTo(void* aFrom,void* aTo);
+		void MoveOrCopyDataFromTo(void* aFrom, void* aTo);
 
 	private:
 		std::unique_ptr<std::byte[]> myBuffer; //Component storage
@@ -180,31 +182,37 @@ namespace ecs
 	public:
 		Archetype() = default;
 		~Archetype() = default;
+		Archetype(Archetype&& aArchetype) noexcept;
+		Archetype& operator=(const Archetype& aArchetype);
+		Archetype& operator=(Archetype&& aArchetype);
+
 		size_t			GetLastRow() const;
+		size_t			GetEntityRow(EntityID aEntity) const;
 		ArchetypeID		GetID() const;
 		void			SetID(ArchetypeID aID);
-		const Type&		GetType() const;
+		const Type& GetType() const;
 		ComponentID		GetComponentIDFromTypeList(size_t aIndex) const;
 		size_t			GetNumTypes() const;
 		size_t			GetMaxCount() const;
 		void			SetType(const Type& aType);
 		void			SetMaxCount(size_t aMaxCount);
-		Column*			GetColumn(size_t aColumnIndex);
+		Column* GetColumn(size_t aColumnIndex);
 		size_t			GetNumComponents() const;
 		size_t			GetComponentCapacity() const;
 		ecs::EntityID	GetEntity(size_t aRow) const;
 		void			AddComponentIDToTypeSet(ComponentID aComponentID);
 		bool			HasComponent(ComponentID aComponentID) const;
 		size_t			GetNumEntities() const;
-		ArchetypeEdge&	GetEdge(ComponentID aID);
-		ArchetypeEdge&  GetOrAddEdge(ComponentID aID);
+		ArchetypeEdge& GetEdge(ComponentID aID);
+		ArchetypeEdge& GetOrAddEdge(ComponentID aID);
 		void			ReserveComponentsSize(size_t aSize);
 		void			ResizeComponents(size_t aSize);
 		bool			IsEmpty() const;
 		void			Reset();
+		void			Reset(Archetype& aArchetype);
 		void			AddEmptyComp();
 		std::vector<EntityID>& GetEntityList();
-		
+
 		void			AddEntity(ecs::EntityID aEntity);
 		bool			Contains(const Type& type) const;
 
@@ -214,7 +222,6 @@ namespace ecs
 		ArchetypeEdge& AddEdge(ComponentID aComponentID);
 		int			FindColumnIndex(ComponentID aComponentID) const;
 		void			ShuffleEntity(size_t aFromRow, size_t aToRow);
-		
 	private:
 
 		ArchetypeID myID{ 0 };
@@ -249,7 +256,7 @@ namespace ecs
 		return std::apply(
 			[this](auto&&... args)
 			{
-			return (HasComponent(typeid(args)) || ...);
+				return (HasComponent(typeid(args)) || ...);
 
 			}, filters);
 	}
