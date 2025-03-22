@@ -68,6 +68,48 @@ struct Archetype
 ```
 
 ### Systems
+Systems are functions with queries.
+
+```cpp
+//Systems can be added
+
+World.system("Move Entity",[]()
+{
+    for(Entity entity : World.Query<Position,Rotation,Scale,Velocity>())
+    {
+
+        Position* position = entity.GetComponent<Position>();   
+        Velocity* velocity = entity.GetComponent<Velocity>();
+        position += velocity;   
+
+    }   
+},ecs::Pipeline::OnUpdate);
+
+//Systems can be removed
+World.RemoveSystem("Move Entity",ecs::Pipeline::OnUpdate);
+```
+Removing a system puts it into a queue where it will get removed from the SystemManager at the end of the frame.
+
+Pipelining the systems empowers every decision about the data we are operating on as we can for a fact know in what state each data is at every point of execution in our codebase.
+
+
+### Staging
+Staging allows asynchronous management and execution of code. 
+A stage is a new world, however this world may at any point be merged with another to resume execution in the original.
+This allows for example level streaming where levels and/or parts of the current level may be loaded asynchronously, code and anything else may be executed on the stage as it is essentially just copy of the World.
+````cpp
+
+SceneManager sceneManager; /example code
+World.CreateStage("SomeStage"); 
+
+sceneManager.loadScene();
+Stage* stage = World.GetStage("SomeStage");
+stage.Merge();
+
+````
+
+
+
 
 
 ### Example Usage
