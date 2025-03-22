@@ -104,7 +104,7 @@ World.CreateStage("SomeStage");
 
 sceneManager.loadScene();
 Stage* stage = World.GetStage("SomeStage");
-stage.Merge();
+stage->Merge();
 
 ````
 
