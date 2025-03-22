@@ -97,7 +97,7 @@ Pipelining the systems empowers every decision about the data we are operating o
 ### Staging
 Staging allows asynchronous management and execution of code. 
 A stage is a new world, however this world may at any point be merged with another to resume execution in the original.
-This allows for example level streaming where levels and/or parts of the current level may be loaded asynchronously, code and anything else may be executed on the stage as it is essentially just copy of the World.
+This allows for example level streaming where levels and/or parts of the current level may be loaded asynchronously, code and anything else may be executed on the stage as it is essentially just another World.
 ````cpp
 
 SceneManager sceneManager; /example code
