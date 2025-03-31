@@ -186,6 +186,8 @@ namespace ecs
 		/// </returns>
 		CleanUp PrepareCleanupForLevelLoad();
 
+		CleanUp	GetCustomCleanup(std::function<CleanUp()> aCleanUp);
+
 		/// <summary>
 		/// Progresses all systems in the ECS, typically used in a game loop or during time-based updates.
 		/// </summary>
@@ -241,6 +243,8 @@ namespace ecs
 		/// </returns>
 		int32_t TickCount() const;
 
+		
+		
 		void CreateStage(std::string& aStageName);
 		Stage* GetStage(std::string& aStageName);
 	protected:

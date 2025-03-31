@@ -7,8 +7,8 @@ ecs::SystemManager::SystemManager()
 {
 
 }
-static int tick = 0;
-static float loctime = 0;
+//static int tick = 0;
+//static float loctime = 0;
 bool ecs::SystemManager::Progress()
 {
 	myTimer.Advance();
@@ -24,33 +24,61 @@ bool ecs::SystemManager::Progress()
 		myDebugIsStarted = true;
 	}
 #endif
+
+
 		OnLoad();
+
+
 		PostLoad();
+
+
 #ifndef _RETAIL
 	DebugPreUpdate();
 	DebugOnUpdate();
 #endif
 	/*while (myTimer.ShouldRunFixed())
 	{*/
+
+
 		PreUpdate();
+
 		OnUpdate();
+
+
 		OnValidate();
+
+
 		//myTimer.FixedTick();
 	/*}*/
-	loctime += myTimer.GetDeltaTime();
-	myTimer.CalculateAlpha();
+	//loctime += myTimer.GetDeltaTime();
+	//myTimer.CalculateAlpha();
+
 
 	OnRenderLoad();
+
+
 	PostRenderLoad();
+
+
 	PreRender();
+
+
 	Render();
+
+
 	UIRender();
+
+
 #ifndef _RETAIL
 	DebugRender();
 	DebugPostRender();
 #endif
 	PostRender();
+
+
 	RemoveSystems();
+
+
 
 	Log::Impl::FinalPrint();
 

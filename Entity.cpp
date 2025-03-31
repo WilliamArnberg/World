@@ -52,7 +52,12 @@ namespace ecs
 	{
 		JPH::Mat44 localTransform = JPH::Mat44::sIdentity();
 		localTransform.SetDiagonal3(JPH::Vec3(GetComponent<Scale>()->scale));
-		localTransform = JPH::Mat44::sRotation(GetComponent<Rotation>()->rotation.Normalized()) * localTransform;
+		JPH::Quat rotatino = GetComponent<Rotation>()->rotation.Normalized();
+		if(rotatino.IsNaN())
+		{
+			rotatino = JPH::Quat::sIdentity();
+		}
+		localTransform = JPH::Mat44::sRotation(rotatino.Normalized()) * localTransform;
 		localTransform.SetTranslation(JPH::Vec3(GetComponent<Position>()->position));
 		return localTransform;
 	}

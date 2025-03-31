@@ -261,7 +261,10 @@ namespace ecs {
 		myClearOnLoadIndex.clear();
 		return cleanUp;
 	}
-
+	CleanUp World::GetCustomCleanup(std::function<CleanUp()> aCustom)
+	{
+		return aCustom();
+	}
 	bool World::Progress()
 	{
 		return mySystems->Progress();
