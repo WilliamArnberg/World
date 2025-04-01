@@ -61,11 +61,11 @@ inline ComponentTypeInfo World::RegisterComponent()
 	typeInfo.alignment = alignof(T);
 	typeInfo.typeID = typeid(T);
 
-		// Default constructor
+	// Default constructor
 	typeInfo.construct = std::is_default_constructible_v<T> ?
 		[](void* dest) { new (dest) T(); } : nullptr;
 
-		// Copy constructor
+	// Copy constructor
 	typeInfo.copy = std::is_copy_constructible_v<T> ?
 		[](void* dest, const void* src) { new (dest) T(*reinterpret_cast<const T*>(src)); } : nullptr;
 
