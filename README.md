@@ -51,6 +51,37 @@ struct ComponentTypeInfo
 	void (*destruct)(void* aObj) = nullptr;// Destructor
 	bool isTrivial = false;
 }
+
+template<typename T>
+inline ComponentTypeInfo World::RegisterComponent()
+{
+	ComponentTypeInfo typeInfo;
+
+	typeInfo.size = sizeof(T);
+	typeInfo.alignment = alignof(T);
+	typeInfo.typeID = typeid(T);
+
+		// Default constructor
+	typeInfo.construct = std::is_default_constructible_v<T> ?
+		[](void* dest) { new (dest) T(); } : nullptr;
+
+		// Copy constructor
+	typeInfo.copy = std::is_copy_constructible_v<T> ?
+		[](void* dest, const void* src) { new (dest) T(*reinterpret_cast<const T*>(src)); } : nullptr;
+
+	// Move constructor
+	typeInfo.move = std::is_move_constructible_v<T> ?
+		[](void* dest, void* src) { new (dest) T(std::move(*reinterpret_cast<T*>(src))); } : nullptr;
+
+	// Destructor
+	typeInfo.destruct = std::is_destructible_v<T> ?
+		[](void* obj) { reinterpret_cast<T*>(obj)->~T(); } : nullptr;
+
+	//Trivial copyable check
+	typeInfo.isTrivial = std::is_trivially_copyable_v<T>;
+	return typeInfo;
+}
+
 ```
 
 The columns are stored in an Archetype.
